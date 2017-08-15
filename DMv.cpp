@@ -26,7 +26,7 @@ typedef struct {
 
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da);
 
-PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da);
+PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da, Vec FP);
 
 PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_const, double dz_const);
 
@@ -51,7 +51,7 @@ extern long V_NE, V_GN, V_GT;
 extern long GaussQuad;
 
 extern Mat VA, VB, VG;
-extern Vec Vf, Veloc, Veloc_fut;
+extern Vec Vf,Vf_P, Veloc, Veloc_fut;
 
 
 extern Vec rk_vec2;
@@ -148,6 +148,7 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateGlobalVector(da_Veloc,&Veloc);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&Veloc_fut);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&Vf);CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(da_Veloc,&Vf_P);CHKERRQ(ierr);
 	
 	ierr = DMCreateGlobalVector(da_Veloc,&Pressure);CHKERRQ(ierr);
 	
@@ -267,6 +268,7 @@ PetscErrorCode build_veloc_3d()
 	if (rank==0) printf("passou VA\n");
 	ierr = MatZeroEntries(VB);CHKERRQ(ierr);
 	ierr = VecZeroEntries(Vf);CHKERRQ(ierr);
+	ierr = VecZeroEntries(Vf_P);CHKERRQ(ierr);
 	
 	if (rank==0) printf("build VA,Vf\n");
 	ierr = AssembleA_Veloc(VA,VG,da_Veloc,da_Thermal);CHKERRQ(ierr);
@@ -274,7 +276,7 @@ PetscErrorCode build_veloc_3d()
 	
 	ierr = calc_drho();CHKERRQ(ierr);
 	
-	ierr = AssembleF_Veloc(Vf,da_Veloc,da_Thermal);CHKERRQ(ierr);
+	ierr = AssembleF_Veloc(Vf,da_Veloc,da_Thermal,Vf_P);CHKERRQ(ierr);
 	if (rank==0) printf("t\n");
 	
 	
@@ -310,8 +312,9 @@ PetscErrorCode solve_veloc_3d()
 	//if (rank==0) printf("k\n");
 	ierr = KSPSetFromOptions(V_ksp);CHKERRQ(ierr);
 	//if (rank==0) printf("k\n");
+	ierr = KSPSetInitialGuessNonzero(V_ksp,PETSC_TRUE);
 	
-	ierr = KSPSetTolerances(V_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	ierr = KSPSetTolerances(V_ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
 	
 	////////
@@ -320,7 +323,7 @@ PetscErrorCode solve_veloc_3d()
 	
 	PetscInt maxk = 40,k;
 	
-	ierr = KSPSolve(V_ksp,Vf,Veloc_fut);CHKERRQ(ierr);
+	ierr = KSPSolve(V_ksp,Vf_P,Veloc_fut);CHKERRQ(ierr);
 	
 	//write_veloc_3d(101);
 	
@@ -396,6 +399,7 @@ PetscErrorCode destroy_veloc_3d()
 	ierr = VecDestroy(&Veloc_fut);CHKERRQ(ierr);
 	ierr = VecDestroy(&Veloc);CHKERRQ(ierr);
 	ierr = VecDestroy(&Vf);CHKERRQ(ierr);
+	ierr = VecDestroy(&Vf_P);CHKERRQ(ierr);
 	ierr = MatDestroy(&VA);CHKERRQ(ierr);
 	ierr = MatDestroy(&VB);CHKERRQ(ierr);
 	ierr = DMDestroy(&da_Veloc);CHKERRQ(ierr);

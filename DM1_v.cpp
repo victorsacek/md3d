@@ -43,6 +43,8 @@ extern double visco_r;
 
 extern Vec Veloc_Cond;
 
+extern Vec Pressure;
+
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	PetscErrorCode         ierr;
@@ -53,7 +55,7 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	MatStencil indr[T_NE],ind1[1],ind[V_GT], indp[1];
 	
-	PetscScalar ONE[1]={1.0},u[V_GT*V_GT],val_cond[1];
+	PetscScalar u[V_GT*V_GT],val_cond[1];
 	
 	/////
 	Stokes					***VVC;
@@ -245,17 +247,20 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	PetscFunctionReturn(0);
 }
 
-PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
+PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
-	Vec                    local_F,local_dRho;
+	Vec                    local_F,local_FP,local_dRho;
 	PetscScalar             ***rr;
-	Stokes					***ff;
+	Stokes					***ff,***ffp;
+	
+	Vec						local_P;
+	Stokes					***pp;
 	
 	
 	PetscInt               M,N,P;
 	PetscErrorCode         ierr;
 	
-	PetscScalar				Vfe[V_GT],dr[T_NE];
+	PetscScalar				Vfe[V_GT],Vfe_P[V_GT],dr[T_NE];
 	
 	PetscInt               sex,sey,sez,mx,my,mz;
 	PetscInt               ei,ej,ek;
@@ -269,6 +274,12 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
 	ierr = DMDAVecGetArray(veloc_da,local_F,&ff);CHKERRQ(ierr);
 	
+	ierr = DMGetLocalVector(veloc_da,&local_FP);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_FP);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(veloc_da,local_FP,&ffp);CHKERRQ(ierr);
+	
+	/////
+	
 	
 	ierr = DMGetLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
 	
@@ -279,6 +290,17 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 	
 	ierr = DMDAVecGetArray(drho_da,local_dRho,&rr);CHKERRQ(ierr);
 	
+	
+	/////
+	
+	ierr = DMGetLocalVector(veloc_da,&local_P);CHKERRQ(ierr);
+	
+	ierr = VecZeroEntries(local_P);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(veloc_da,Pressure,INSERT_VALUES,local_P);
+	ierr = DMGlobalToLocalEnd(  veloc_da,Pressure,INSERT_VALUES,local_P);
+	
+	ierr = DMDAVecGetArray(veloc_da,local_P,&pp);CHKERRQ(ierr);
 	
 	/////
 	Stokes					***VVC;
@@ -292,6 +314,8 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 	
 	ierr = DMDAVecGetArray(veloc_da,local_VC,&VVC);CHKERRQ(ierr);
 	//////
+	
+	
 
 	
 	
@@ -338,6 +362,7 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 					for (j=0;j<T_NE;j++){
 						Vfe[i]+=VfMe[i*T_NE+j]*dr[j];
 					}
+					Vfe_P[i] = Vfe[i] - VCe[i]*pp[ek][ej][ei].u;
 				}
 				
 				n=0;
@@ -377,13 +402,22 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 				
 				for (n=0;n<8;n++){
 					g = 3*n;
-					if (VVC[indr[n].k][indr[n].j][indr[n].i].u==0)	Vfe[g]=0.0;
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].u==0){
+						Vfe[g]=0.0;
+						Vfe_P[g]=0.0;
+					}
 					
 					g = 3*n+1;
-					if (VVC[indr[n].k][indr[n].j][indr[n].i].v==0)	Vfe[g]=0.0;
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].v==0){
+						Vfe[g]=0.0;
+						Vfe_P[g]=0.0;
+					}
 					
 					g = 3*n+2;
-					if (VVC[indr[n].k][indr[n].j][indr[n].i].w==0)	Vfe[g]=0.0;
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].w==0){
+						Vfe[g]=0.0;
+						Vfe_P[g]=0.0;
+					}
 				}
 				
 				
@@ -391,6 +425,12 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 					ff[ind[c].k][ind[c].j][ind[c].i].u += Vfe[c]; c++;
 					ff[ind[c].k][ind[c].j][ind[c].i].v += Vfe[c]; c++;
 					ff[ind[c].k][ind[c].j][ind[c].i].w += Vfe[c]; c++;
+				}
+				
+				for (c=0;c<V_GT;){
+					ffp[ind[c].k][ind[c].j][ind[c].i].u += Vfe_P[c]; c++;
+					ffp[ind[c].k][ind[c].j][ind[c].i].v += Vfe_P[c]; c++;
+					ffp[ind[c].k][ind[c].j][ind[c].i].w += Vfe_P[c]; c++;
 				}
 				
 				
@@ -421,9 +461,16 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 	ierr = DMLocalToGlobalEnd(veloc_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
 	ierr = DMRestoreLocalVector(veloc_da,&local_F);CHKERRQ(ierr);
 	
+	ierr = DMDAVecRestoreArray(veloc_da,local_FP,&ffp);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(veloc_da,local_FP,ADD_VALUES,FP);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(veloc_da,local_FP,ADD_VALUES,FP);CHKERRQ(ierr);
+	ierr = DMRestoreLocalVector(veloc_da,&local_FP);CHKERRQ(ierr);
+	
 	ierr = DMRestoreLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
 	
 	ierr = DMRestoreLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
+	
+	ierr = DMRestoreLocalVector(veloc_da,&local_FP);CHKERRQ(ierr);
 	
 	//printf("passou...\n");
 	

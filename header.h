@@ -147,6 +147,8 @@ Vec Temper_Cond;
 Mat VA, VB, VG;
 Vec Vf, Veloc, Veloc_fut;
 
+Vec Vf_P;
+
 Vec Pressure;
 
 DM da_Veloc;

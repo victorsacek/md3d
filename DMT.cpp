@@ -258,7 +258,7 @@ PetscErrorCode solve_thermal_3d()
 	ierr = KSPSetFromOptions(T_ksp);CHKERRQ(ierr);
 	//if (rank==0) printf("k\n");
 	
-	ierr = KSPSetTolerances(T_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	ierr = KSPSetTolerances(T_ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
 	ierr = KSPSolve(T_ksp,Tf,Temper);CHKERRQ(ierr);
 

@@ -50,7 +50,7 @@ int main(int argc,char **args)
 	int rank;
 	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
 	
-	
+
 	reader(rank);
 	
 	PetscLogDouble Tempo1,Tempo2;
