@@ -50,7 +50,7 @@ int main(int argc,char **args)
 	int rank;
 	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
 	
-
+	
 	reader(rank);
 	
 	PetscLogDouble Tempo1,Tempo2;
@@ -90,6 +90,8 @@ int main(int argc,char **args)
 	
 	ierr = Calc_dt_calor();
 	
+	//float aux_le;
+	
 	for (tempo = dt_calor,tcont=1;tempo<=timeMAX && tcont<=stepMAX;tempo+=dt_calor, tcont++){
 		
 		
@@ -108,6 +110,10 @@ int main(int argc,char **args)
 			ierr = write_veloc_3d(tcont);
 			ierr = write_tempo(tcont);
 		}
+		
+		//if (rank==0) scanf("%f",&aux_le);
+		
+		//MPI_Barrier(PETSC_COMM_WORLD);
 		
 		
 		ierr = Calc_dt_calor();

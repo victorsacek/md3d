@@ -63,6 +63,12 @@ extern int bcT_bot;
 extern int bcT_left;
 extern int bcT_right;
 
+extern Vec local_FT;
+extern Vec local_Temper;
+extern Vec local_TC;
+
+extern Vec local_dRho;
+
 
 PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
@@ -129,6 +135,12 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	
 	ierr = Thermal_init(Temper,da_Thermal);
 	
+	ierr = DMCreateLocalVector(da_Thermal,&local_FT);
+	ierr = DMCreateLocalVector(da_Thermal,&local_Temper);
+	ierr = DMCreateLocalVector(da_Thermal,&local_TC);
+	
+	ierr = DMCreateLocalVector(da_Thermal,&local_dRho);
+	
 	/*PetscViewer viewer;
 	
 	char nome[100];
@@ -152,11 +164,8 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	ierr = DMDAGetInfo(da_Thermal,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
 	
 	
-	Vec                    local_F;
-	
-	ierr = DMGetLocalVector(da_Thermal,&local_F);CHKERRQ(ierr);
-	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
-	ierr = DMDAVecGetArray(da_Thermal,local_F,&ff);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_FT);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(da_Thermal,local_FT,&ff);CHKERRQ(ierr);
 	
 	PetscInt       sx,sy,sz,mmx,mmy,mmz;
 	PetscInt i,j,k;
@@ -183,10 +192,9 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 		}
 	}
 	
-	ierr = DMDAVecRestoreArray(da_Thermal,local_F,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(da_Thermal,local_F,INSERT_VALUES,Temper_Cond);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(da_Thermal,local_F,INSERT_VALUES,Temper_Cond);CHKERRQ(ierr);
-	ierr = DMRestoreLocalVector(da_Thermal,&local_F);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(da_Thermal,local_FT,&ff);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Thermal,local_FT,INSERT_VALUES,Temper_Cond);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Thermal,local_FT,INSERT_VALUES,Temper_Cond);CHKERRQ(ierr);
 	
 	
 	///////
@@ -258,7 +266,7 @@ PetscErrorCode solve_thermal_3d()
 	ierr = KSPSetFromOptions(T_ksp);CHKERRQ(ierr);
 	//if (rank==0) printf("k\n");
 	
-	ierr = KSPSetTolerances(T_ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	ierr = KSPSetTolerances(T_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
 	ierr = KSPSolve(T_ksp,Tf,Temper);CHKERRQ(ierr);
 

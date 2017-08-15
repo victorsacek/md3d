@@ -29,6 +29,15 @@ extern double Delta_T;
 
 extern int T_initial_cond;
 
+extern Vec local_FT;
+extern Vec local_Temper;
+
+extern Vec local_TC;
+
+extern Vec local_V;
+
+
+
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
@@ -91,7 +100,6 @@ PetscErrorCode DMDAGetElementCorners(DM da,PetscInt *sx,PetscInt *sy,PetscInt *s
 PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *TMe,PetscReal *TFe,
 								 DM veloc_da, Vec Veloc_total)
 {
-	//DM                     cda;
 	
 	PetscErrorCode ierr;
 	
@@ -100,9 +108,7 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 	
 	
 	Stokes					***VV;
-	Vec						local_V;
 	
-	ierr = DMGetLocalVector(veloc_da,&local_V);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_total,INSERT_VALUES,local_V);
@@ -115,9 +121,7 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 	////////
 	
 	PetscScalar					***TTC;
-	Vec						local_TC;
 	
-	ierr = DMGetLocalVector(thermal_da,&local_TC);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_TC);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(thermal_da,Temper_Cond,INSERT_VALUES,local_TC);
@@ -206,7 +210,9 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 	ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 	ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 	
-	ierr = DMRestoreLocalVector(veloc_da,&local_V);CHKERRQ(ierr);
+	
+	ierr = DMDAVecRestoreArray(veloc_da,local_V,&VV);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(thermal_da,local_TC,&TTC);CHKERRQ(ierr);
 	
 	
 	PetscFunctionReturn(0);
@@ -215,9 +221,7 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *TMe,PetscReal *TFe,
 								 DM veloc_da, Vec Veloc_total)
 {
-	//DM                     cda;
-	
-	Vec                    local_F,local_Temper;
+
 	PetscScalar              ***ff,***tt;
 	PetscInt               M,N,P;
 	PetscErrorCode         ierr;
@@ -229,13 +233,11 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	PetscFunctionBeginUser;
 	ierr = DMDAGetInfo(thermal_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
 	
-	//ierr = DMGetCoordinateDM(thermal_da,&cda);CHKERRQ(ierr);
+
 	
 	
 	Stokes					***VV;
-	Vec						local_V;
-	
-	ierr = DMGetLocalVector(veloc_da,&local_V);CHKERRQ(ierr);
+
 	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_total,INSERT_VALUES,local_V);
@@ -247,9 +249,8 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	////////
 	
 	PetscScalar					***TTC;
-	Vec						local_TC;
 	
-	ierr = DMGetLocalVector(thermal_da,&local_TC);CHKERRQ(ierr);
+	
 	ierr = VecZeroEntries(local_TC);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(thermal_da,Temper_Cond,INSERT_VALUES,local_TC);
@@ -262,12 +263,12 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	
 	
 	/* get acces to the vector */
-	ierr = DMGetLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
-	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
-	ierr = DMDAVecGetArray(thermal_da,local_F,&ff);CHKERRQ(ierr);
+
+	ierr = VecZeroEntries(local_FT);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(thermal_da,local_FT,&ff);CHKERRQ(ierr);
 	
 	
-	ierr = DMGetLocalVector(thermal_da,&local_Temper);CHKERRQ(ierr);
+
 	
 	ierr = VecZeroEntries(local_Temper);CHKERRQ(ierr);
 	
@@ -380,15 +381,14 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 		}
 	}
 	
-	ierr = DMDAVecRestoreArray(thermal_da,local_F,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(thermal_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(thermal_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
-	ierr = DMRestoreLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(thermal_da,local_FT,&ff);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(thermal_da,local_FT,ADD_VALUES,F);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(thermal_da,local_FT,ADD_VALUES,F);CHKERRQ(ierr);
 	
-	ierr = DMRestoreLocalVector(thermal_da,&local_Temper);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(veloc_da,local_V,&VV);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(thermal_da,local_TC,&TTC);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(thermal_da,local_Temper,&tt);CHKERRQ(ierr);
 	
-	
-	ierr = DMRestoreLocalVector(veloc_da,&local_V);CHKERRQ(ierr);
 
 	PetscFunctionReturn(0);
 }
@@ -463,7 +463,6 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	ierr = DMLocalToGlobalEnd(thermal_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
 	ierr = DMRestoreLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
 	
-	//ierr = DMDAVecRestoreArray(cda,coords,&_coords);CHKERRQ(ierr);
 	PetscFunctionReturn(0);
 	
 }

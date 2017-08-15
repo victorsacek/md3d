@@ -87,6 +87,15 @@ extern double dy_const;
 extern double dz_const;
 
 
+extern Vec local_V;
+extern Vec local_VC;
+extern Vec local_FV;
+extern Vec local_FP;
+extern Vec local_P;
+
+
+
+
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
 
@@ -164,17 +173,21 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateGlobalVector(da_Veloc,&Veloc_Cond);CHKERRQ(ierr);
 	
 	
+	ierr = DMCreateLocalVector(da_Veloc,&local_V);CHKERRQ(ierr);
+	ierr = DMCreateLocalVector(da_Veloc,&local_VC);CHKERRQ(ierr);
+	ierr = DMCreateLocalVector(da_Veloc,&local_FV);CHKERRQ(ierr);
+	ierr = DMCreateLocalVector(da_Veloc,&local_FP);CHKERRQ(ierr);
+	ierr = DMCreateLocalVector(da_Veloc,&local_P);CHKERRQ(ierr);
+	
+	
 	Stokes					***ff;
 	PetscInt               M,N,P;
 	
 	ierr = DMDAGetInfo(da_Veloc,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
 	
 	
-	Vec                    local_F;
-	
-	ierr = DMGetLocalVector(da_Veloc,&local_F);CHKERRQ(ierr);
-	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
-	ierr = DMDAVecGetArray(da_Veloc,local_F,&ff);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_FV);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(da_Veloc,local_FV,&ff);CHKERRQ(ierr);
 	
 	PetscInt       sx,sy,sz,mmx,mmy,mmz;
 	PetscInt i,j,k;
@@ -218,10 +231,9 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 		}
 	}
 	
-	ierr = DMDAVecRestoreArray(da_Veloc,local_F,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(da_Veloc,local_F,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(da_Veloc,local_F,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
-	ierr = DMRestoreLocalVector(da_Veloc,&local_F);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(da_Veloc,local_FV,&ff);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
 	
 	int ind;
 	PetscReal r;
@@ -314,7 +326,7 @@ PetscErrorCode solve_veloc_3d()
 	//if (rank==0) printf("k\n");
 	ierr = KSPSetInitialGuessNonzero(V_ksp,PETSC_TRUE);
 	
-	ierr = KSPSetTolerances(V_ksp,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	ierr = KSPSetTolerances(V_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
 	
 	////////

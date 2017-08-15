@@ -45,6 +45,18 @@ extern Vec Veloc_Cond;
 
 extern Vec Pressure;
 
+extern Vec local_Temper;
+
+extern Vec local_VC;
+
+extern Vec local_FV;
+
+extern Vec local_FP;
+
+extern Vec local_P;
+
+extern Vec local_dRho;
+
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	PetscErrorCode         ierr;
@@ -59,9 +71,8 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	/////
 	Stokes					***VVC;
-	Vec						local_VC;
+	//Vec						local_VC;
 	
-	ierr = DMGetLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_VC);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_Cond,INSERT_VALUES,local_VC);
@@ -107,22 +118,17 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	//////////
 	
 	
-	Vec local_temper;
+
 	PetscScalar             ***tt;
 	
+	ierr = VecZeroEntries(local_Temper);CHKERRQ(ierr);
 	
-	ierr = DMGetLocalVector(temper_da,&local_temper);CHKERRQ(ierr);
+	ierr = DMGlobalToLocalBegin(temper_da,Temper,INSERT_VALUES,local_Temper);
+	ierr = DMGlobalToLocalEnd(  temper_da,Temper,INSERT_VALUES,local_Temper);
 	
-	ierr = VecZeroEntries(local_temper);CHKERRQ(ierr);
-	
-	ierr = DMGlobalToLocalBegin(temper_da,Temper,INSERT_VALUES,local_temper);
-	ierr = DMGlobalToLocalEnd(  temper_da,Temper,INSERT_VALUES,local_temper);
-	
-	ierr = DMDAVecGetArray(temper_da,local_temper,&tt);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	
 
-	ierr = DMRestoreLocalVector(temper_da,&local_temper);CHKERRQ(ierr);
-	
 	
 	PetscReal volume = dx_const*dy_const*dz_const;
 	
@@ -239,7 +245,8 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	}
 	
 	
-	ierr = DMRestoreLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);
+	ierr = DMDAVecRestoreArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	
 	
 	
@@ -249,11 +256,10 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 
 PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
-	Vec                    local_F,local_FP,local_dRho;
+	//Vec                    local_dRho;
 	PetscScalar             ***rr;
 	Stokes					***ff,***ffp;
 	
-	Vec						local_P;
 	Stokes					***pp;
 	
 	
@@ -270,18 +276,18 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	ierr = DMDAGetInfo(veloc_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
 	
 	/* get acces to the vector */
-	ierr = DMGetLocalVector(veloc_da,&local_F);CHKERRQ(ierr);
-	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
-	ierr = DMDAVecGetArray(veloc_da,local_F,&ff);CHKERRQ(ierr);
+
+	ierr = VecZeroEntries(local_FV);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(veloc_da,local_FV,&ff);CHKERRQ(ierr);
 	
-	ierr = DMGetLocalVector(veloc_da,&local_FP);CHKERRQ(ierr);
+
 	ierr = VecZeroEntries(local_FP);CHKERRQ(ierr);
 	ierr = DMDAVecGetArray(veloc_da,local_FP,&ffp);CHKERRQ(ierr);
 	
 	/////
 	
 	
-	ierr = DMGetLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
+	//ierr = DMGetLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
 	
 	ierr = VecZeroEntries(local_dRho);CHKERRQ(ierr);
 	
@@ -293,8 +299,6 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
 	/////
 	
-	ierr = DMGetLocalVector(veloc_da,&local_P);CHKERRQ(ierr);
-	
 	ierr = VecZeroEntries(local_P);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(veloc_da,Pressure,INSERT_VALUES,local_P);
@@ -304,9 +308,8 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
 	/////
 	Stokes					***VVC;
-	Vec						local_VC;
+	//Vec						local_VC;
 	
-	ierr = DMGetLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_VC);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_Cond,INSERT_VALUES,local_VC);
@@ -456,21 +459,17 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 		}
 	}
 	
-	ierr = DMDAVecRestoreArray(veloc_da,local_F,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(veloc_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(veloc_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
-	ierr = DMRestoreLocalVector(veloc_da,&local_F);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(veloc_da,local_FV,&ff);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(veloc_da,local_FV,ADD_VALUES,F);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(veloc_da,local_FV,ADD_VALUES,F);CHKERRQ(ierr);
 	
 	ierr = DMDAVecRestoreArray(veloc_da,local_FP,&ffp);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(veloc_da,local_FP,ADD_VALUES,FP);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(veloc_da,local_FP,ADD_VALUES,FP);CHKERRQ(ierr);
-	ierr = DMRestoreLocalVector(veloc_da,&local_FP);CHKERRQ(ierr);
 	
-	ierr = DMRestoreLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
-	
-	ierr = DMRestoreLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
-	
-	ierr = DMRestoreLocalVector(veloc_da,&local_FP);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(drho_da,local_dRho,&rr);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(veloc_da,local_P,&pp);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);CHKERRQ(ierr);
 	
 	//printf("passou...\n");
 	

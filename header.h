@@ -141,6 +141,10 @@ KSP T_ksp;
 
 Vec Temper_Cond;
 
+Vec local_FT;
+Vec local_Temper;
+Vec local_TC;
+
 
 /////////
 
@@ -177,5 +181,10 @@ Vec uk_vec;
 
 Vec Veloc_Cond;
 
+Vec local_V;
+Vec local_VC;
+Vec local_FV;
+Vec local_FP;
+Vec local_P;
 
-
+Vec local_dRho;
