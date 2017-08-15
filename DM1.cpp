@@ -36,6 +36,8 @@ extern Vec local_TC;
 
 extern Vec local_V;
 
+extern PetscInt temper_extern;
+
 
 
 typedef struct {
@@ -405,63 +407,119 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	PetscInt               M,N,P;
 	PetscErrorCode         ierr;
 	
-	PetscInt i,j,k;
+	PetscInt i,j,k,t;
 	
 	
 	PetscFunctionBeginUser;
 	ierr = DMDAGetInfo(thermal_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
 	
-	//ierr = DMGetCoordinateDM(thermal_da,&cda);CHKERRQ(ierr);
 	
 	
-	
-	/* get acces to the vector */
-	ierr = DMGetLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
-	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
-	ierr = DMDAVecGetArray(thermal_da,local_F,&ff);CHKERRQ(ierr);
-	
-	PetscInt       sx,sy,sz,mmx,mmy,mmz;
-	
-	ierr = DMDAGetCorners(thermal_da,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
 	
 	PetscReal temper_aux,t1_aux;
+
+	PetscInt ix[1];
+	PetscScalar y[1];
 	
-	for (k=sz; k<sz+mmz; k++) {
-		for (j=sy; j<sy+mmy; j++) {
-			for (i=sx; i<sx+mmx; i++) {
-				
-				
-				if (T_initial_cond==0){
-					temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(i*3.14159/(M-1));
+	PetscInt low,high;
+	
+	if (temper_extern==1){
+		PetscInt size0,size;
+		PetscViewer    viewer;
+		
+		VecGetSize(F,&size0);
+		
+		
+		Vec Fprov;
+		
+		//PetscPrintf(PETSC_COMM_WORLD,"size = %d\n",size);
+		
+		PetscViewerBinaryOpen(PETSC_COMM_WORLD,"Temper_init.bin",FILE_MODE_READ,&viewer);
+		VecCreate(PETSC_COMM_WORLD,&Fprov);
+		VecLoad(Fprov,viewer);
+		PetscViewerDestroy(&viewer);
+		
+		
+		VecGetOwnershipRange(Fprov,&low,&high);
+		
+		printf("%d %d\n",low,high);
+		
+		
+		Vec FN;
+		
+		DMDACreateNaturalVector(thermal_da,&FN);
+		
+		
+		for (t=low;t<high;t++){
+			ix[0] = t;
+			VecGetValues(Fprov,1,ix,y);
+			VecSetValue(FN,t,y[0], INSERT_VALUES);
+		}
+		
+		DMDANaturalToGlobalBegin(thermal_da,FN,INSERT_VALUES,F);
+		DMDANaturalToGlobalEnd(thermal_da,FN,INSERT_VALUES,F);
+		
+		
+		VecView(F,PETSC_VIEWER_STDOUT_WORLD);
+		
+		PetscBarrier(NULL);
+		
+		VecAssemblyBegin(F);
+		VecAssemblyEnd(F);
+		
+		
+		
+		
+	}
+	else{
+		/* get acces to the vector */
+		ierr = DMGetLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
+		ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
+		ierr = DMDAVecGetArray(thermal_da,local_F,&ff);CHKERRQ(ierr);
+		
+		PetscInt       sx,sy,sz,mmx,mmy,mmz;
+		
+		ierr = DMDAGetCorners(thermal_da,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+		
+		for (k=sz; k<sz+mmz; k++) {
+			for (j=sy; j<sy+mmy; j++) {
+				for (i=sx; i<sx+mmx; i++) {
+					
+					
+					if (T_initial_cond==0){
+						temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(i*3.14159/(M-1));
+					}
+					
+					if (T_initial_cond==1){
+						temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(j*3.14159/(N-1))*cos(i*3.14159/(M-1));
+					}
+					
+					if (T_initial_cond==74){
+						t1_aux = 0.5*tan((P-1-k)*3./(P-1)-1.5)/tan(1.5)+0.5;
+						temper_aux=Delta_T*t1_aux + Delta_T*0.2*tan(i*3./(M-1)-1.5);
+					}
+					
+					
+					if (k==P-1) temper_aux=0.0;
+					if (k==0) temper_aux=Delta_T;
+					
+					if (temper_aux>Delta_T) temper_aux=Delta_T;
+					if (temper_aux<0.0) temper_aux=0.0;
+					
+					ff[k][j][i]=temper_aux;
 				}
-				
-				if (T_initial_cond==1){
-					temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(j*3.14159/(N-1))*cos(i*3.14159/(M-1));
-				}
-				
-				if (T_initial_cond==74){
-					t1_aux = 0.5*tan((P-1-k)*3./(P-1)-1.5)/tan(1.5)+0.5;
-					temper_aux=Delta_T*t1_aux + Delta_T*0.2*tan(i*3./(M-1)-1.5);
-				}
-				
-				
-				if (k==P-1) temper_aux=0.0;
-				if (k==0) temper_aux=Delta_T;
-				
-				if (temper_aux>Delta_T) temper_aux=Delta_T;
-				if (temper_aux<0.0) temper_aux=0.0;
-				
-				ff[k][j][i]=temper_aux;
 			}
 		}
+		
+		
+		ierr = DMDAVecRestoreArray(thermal_da,local_F,&ff);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalBegin(thermal_da,local_F,INSERT_VALUES,F);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalEnd(thermal_da,local_F,INSERT_VALUES,F);CHKERRQ(ierr);
+		ierr = DMRestoreLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
+		
+		
 	}
 	
-	
-	
-	ierr = DMDAVecRestoreArray(thermal_da,local_F,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(thermal_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(thermal_da,local_F,ADD_VALUES,F);CHKERRQ(ierr);
-	ierr = DMRestoreLocalVector(thermal_da,&local_F);CHKERRQ(ierr);
 	
 	PetscFunctionReturn(0);
 	

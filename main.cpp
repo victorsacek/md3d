@@ -64,6 +64,16 @@ int main(int argc,char **args)
 	ierr = PetscOptionsGetInt(NULL,NULL,"-Py",&Py,NULL);CHKERRQ(ierr);
 	ierr = PetscOptionsGetInt(NULL,NULL,"-Pz",&Pz,NULL);CHKERRQ(ierr);
 	
+	rtol = PETSC_DEFAULT;
+	ierr = PetscOptionsGetReal(NULL,NULL,"-rtol",&rtol,NULL);CHKERRQ(ierr);
+	
+	temper_extern = 0;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-te",&temper_extern,NULL);CHKERRQ(ierr);
+	
+	
+	denok_min = 1.0E-4;
+	ierr = PetscOptionsGetReal(NULL,NULL,"-denok",&denok_min,NULL);CHKERRQ(ierr);
+	
 	dx_const = Lx/(Nx-1);
 	dy_const = Ly/(Ny-1);
 	dz_const = depth/(Nz-1);
@@ -86,6 +96,8 @@ int main(int argc,char **args)
 	ierr = write_veloc_3d(tcont);
 	ierr = write_thermal_3d(tcont);
 	ierr = write_tempo(tcont);
+	
+	VecCopy(Veloc_fut,Veloc);
 	
 	
 	ierr = Calc_dt_calor();

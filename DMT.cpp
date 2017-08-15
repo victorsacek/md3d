@@ -69,6 +69,8 @@ extern Vec local_TC;
 
 extern Vec local_dRho;
 
+extern PetscReal rtol;
+
 
 PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
@@ -134,6 +136,8 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	ierr = DMCreateGlobalVector(da_Thermal,&dRho);CHKERRQ(ierr);
 	
 	ierr = Thermal_init(Temper,da_Thermal);
+	
+	//VecView(Temper,PETSC_VIEWER_STDOUT_WORLD);
 	
 	ierr = DMCreateLocalVector(da_Thermal,&local_FT);
 	ierr = DMCreateLocalVector(da_Thermal,&local_Temper);
@@ -266,7 +270,7 @@ PetscErrorCode solve_thermal_3d()
 	ierr = KSPSetFromOptions(T_ksp);CHKERRQ(ierr);
 	//if (rank==0) printf("k\n");
 	
-	ierr = KSPSetTolerances(T_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	ierr = KSPSetTolerances(T_ksp,rtol,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
 	ierr = KSPSolve(T_ksp,Tf,Temper);CHKERRQ(ierr);
 

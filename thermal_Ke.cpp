@@ -129,18 +129,15 @@ PetscErrorCode montaKeThermal_simplif(double *Ke_local,double *Ke){
 	
 	double NT_V[V_NE],NT_u[V_NE];
 	
-	for (kx=-r06; kx<=r06; kx+=r06){
-		if (kx==0) Hx=r8p9;
-		else Hx=r5p9;
+	for (kz=-r06; kz<=r06; kz+=r06){
+		if (kz==0) Hz=r8p9;
+		else Hz=r5p9;
 		for (ky=-r06; ky<=r06; ky+=r06){
 			if (ky==0) Hy=r8p9;
 			else Hy=r5p9;
-			for (kz=-r06; kz<=r06; kz+=r06){
-				if (kz==0) Hz=r8p9;
-				else Hz=r5p9;
-				
-				
-				
+			for (kx=-r06; kx<=r06; kx+=r06){
+				if (kx==0) Hx=r8p9;
+				else Hx=r5p9;
 				
 				
 				prodH = Hx*Hy*Hz;
@@ -221,15 +218,15 @@ PetscErrorCode montaKeThermal_general(PetscReal *Ke, PetscReal *Me, PetscReal *F
 	
 	long point=0;
 	
-	for (kx=-r06; kx<=r06; kx+=r06){
-		if (kx==0) Hx=r8p9;
-		else Hx=r5p9;
+	for (kz=-r06; kz<=r06; kz+=r06){
+		if (kz==0) Hz=r8p9;
+		else Hz=r5p9;
 		for (ky=-r06; ky<=r06; ky+=r06){
 			if (ky==0) Hy=r8p9;
 			else Hy=r5p9;
-			for (kz=-r06; kz<=r06; kz+=r06){
-				if (kz==0) Hz=r8p9;
-				else Hz=r5p9;
+			for (kx=-r06; kx<=r06; kx+=r06){
+				if (kx==0) Hx=r8p9;
+				else Hx=r5p9;
 				
 				
 				prodH = Hx*Hy*Hz;

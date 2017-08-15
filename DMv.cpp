@@ -93,7 +93,9 @@ extern Vec local_FV;
 extern Vec local_FP;
 extern Vec local_P;
 
+extern PetscReal rtol;
 
+extern PetscReal denok_min;
 
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
@@ -326,7 +328,7 @@ PetscErrorCode solve_veloc_3d()
 	//if (rank==0) printf("k\n");
 	ierr = KSPSetInitialGuessNonzero(V_ksp,PETSC_TRUE);
 	
-	ierr = KSPSetTolerances(V_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	ierr = KSPSetTolerances(V_ksp,rtol,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
 	
 	////////
@@ -348,7 +350,7 @@ PetscErrorCode solve_veloc_3d()
 	
 	if (rank==0) printf("denok = %lg\n",denok);
 	
-	for (k=1;k<maxk && denok>1.0E-4;k++){
+	for (k=1;k<maxk && denok>denok_min;k++){
 		if (k==1) VecCopy(rk_vec2,sk_vec);
 		else {
 			VecDot(rk_vec2,rk_vec2,&betak);
@@ -361,7 +363,7 @@ PetscErrorCode solve_veloc_3d()
 		VecPointwiseMult(gs_vec,gs_vec,Veloc_Cond);
 		
 		VecDot(gs_vec,gs_vec,&denok);
-		if (rank==0) printf("Gs = %lg, k=%d\n",denok,k);
+		
 		
 		
 		KSPSolve(V_ksp,gs_vec,uk_vec);
@@ -382,7 +384,7 @@ PetscErrorCode solve_veloc_3d()
 		VecAYPX(rk_vec2,-alphak,rk_vec);
 		
 		VecDot(rk_vec2,rk_vec2,&denok);
-		
+		if (rank==0) printf("denok = %lg, k=%d\n",denok,k);
 	}
 	
 	
@@ -496,15 +498,15 @@ PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_c
 	
 	
 	point=0;
-	for (kx=-r06; kx<=r06; kx+=r06){
-		if (kx==0) Hx=r8p9;
-		else Hx=r5p9;
+	for (kz=-r06; kz<=r06; kz+=r06){
+		if (kz==0) Hz=r8p9;
+		else Hz=r5p9;
 		for (ky=-r06; ky<=r06; ky+=r06){
 			if (ky==0) Hy=r8p9;
 			else Hy=r5p9;
-			for (kz=-r06; kz<=r06; kz+=r06){
-				if (kz==0) Hz=r8p9;
-				else Hz=r5p9;
+			for (kx=-r06; kx<=r06; kx+=r06){
+				if (kx==0) Hx=r8p9;
+				else Hx=r5p9;
 				
 				prodH = Hx*Hy*Hz;
 				cont=0;
@@ -590,15 +592,15 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 	
 	for (i=0;i<V_GT*V_GT;i++) Ke[i]=0.0;
 	
-	for (kx=-r06; kx<=r06; kx+=r06){
-		if (kx==0) Hx=r8p9;
-		else Hx=r5p9;
+	for (kz=-r06; kz<=r06; kz+=r06){
+		if (kz==0) Hz=r8p9;
+		else Hz=r5p9;
 		for (ky=-r06; ky<=r06; ky+=r06){
 			if (ky==0) Hy=r8p9;
 			else Hy=r5p9;
-			for (kz=-r06; kz<=r06; kz+=r06){
-				if (kz==0) Hz=r8p9;
-				else Hz=r5p9;
+			for (kx=-r06; kx<=r06; kx+=r06){
+				if (kx==0) Hx=r8p9;
+				else Hx=r5p9;
 				
 				Temper_local = 0.0;
 				
@@ -650,16 +652,15 @@ PetscErrorCode montafeVeloc(PetscReal *fMe)
 	}
 	
 	double Hx,Hy,Hz,prodH;
-	
-	for (kx=-r06; kx<=r06; kx+=r06){
-		if (kx==0) Hx=r8p9;
-		else Hx=r5p9;
+	for (kz=-r06; kz<=r06; kz+=r06){
+		if (kz==0) Hz=r8p9;
+		else Hz=r5p9;
 		for (ky=-r06; ky<=r06; ky+=r06){
 			if (ky==0) Hy=r8p9;
 			else Hy=r5p9;
-			for (kz=-r06; kz<=r06; kz+=r06){
-				if (kz==0) Hz=r8p9;
-				else Hz=r5p9;
+			for (kx=-r06; kx<=r06; kx+=r06){
+				if (kx==0) Hx=r8p9;
+				else Hx=r5p9;
 				
 				
 				prodH = Hx*Hy*Hz;
@@ -725,15 +726,15 @@ PetscErrorCode montaCeVeloc(PetscReal *Ce){
 	
 	double Hx,Hy,Hz,prodH;
 	
-	for (kx=-r06; kx<=r06; kx+=r06){
-		if (kx==0) Hx=r8p9;
-		else Hx=r5p9;
+	for (kz=-r06; kz<=r06; kz+=r06){
+		if (kz==0) Hz=r8p9;
+		else Hz=r5p9;
 		for (ky=-r06; ky<=r06; ky+=r06){
 			if (ky==0) Hy=r8p9;
 			else Hy=r5p9;
-			for (kz=-r06; kz<=r06; kz+=r06){
-				if (kz==0) Hz=r8p9;
-				else Hz=r5p9;
+			for (kx=-r06; kx<=r06; kx+=r06){
+				if (kx==0) Hx=r8p9;
+				else Hx=r5p9;
 				
 				
 				prodH = Hx*Hy*Hz;

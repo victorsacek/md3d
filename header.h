@@ -32,7 +32,9 @@ double comp_alpha_thermal = 1.0 - alpha_thermal;
 
 
 
+PetscReal rtol;
 
+PetscInt temper_extern;
 
 /////////
 
@@ -147,6 +149,8 @@ Vec local_TC;
 
 
 /////////
+
+PetscReal denok_min;
 
 Mat VA, VB, VG;
 Vec Vf, Veloc, Veloc_fut;
