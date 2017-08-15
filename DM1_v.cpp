@@ -57,6 +57,10 @@ extern Vec local_P;
 
 extern Vec local_dRho;
 
+
+extern Vec Precon;
+extern Vec local_Precon;
+
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	PetscErrorCode         ierr;
@@ -68,6 +72,11 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	MatStencil indr[T_NE],ind1[1],ind[V_GT], indp[1];
 	
 	PetscScalar u[V_GT*V_GT],val_cond[1];
+	
+	Stokes					***pc;
+	
+	ierr = VecZeroEntries(local_Precon);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(veloc_da,local_Precon,&pc);CHKERRQ(ierr);
 	
 	/////
 	Stokes					***VVC;
@@ -230,6 +239,12 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 				}
 				
 				
+				//preconditioner construction
+				for (n=0;n<V_GT;n++){
+					pc[ek][ej][ei].u+=VCe[n]*VCe[n]/Ke_veloc_final[n*V_GT+n];
+				}
+				
+				
 			}
 		}
 	}
@@ -243,6 +258,11 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 		
 		Verif_VG=1;
 	}
+	
+	ierr = DMDAVecRestoreArray(veloc_da,local_Precon,&pc);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(veloc_da,local_Precon,ADD_VALUES,Precon);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(veloc_da,local_Precon,ADD_VALUES,Precon);CHKERRQ(ierr);
+	
 	
 	
 	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);

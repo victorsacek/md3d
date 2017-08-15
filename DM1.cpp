@@ -54,6 +54,7 @@ extern PetscInt temper_extern;
 double Thermal_profile(double t, double zz);
 
 PetscReal Temper3(double xx,double zz);
+PetscReal Temper4(double xx,double yy,double zz);
 
 
 typedef struct {
@@ -440,7 +441,7 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	PetscInt low,high;
 	
 	if (temper_extern==1){
-		PetscInt size0,size;
+		PetscInt size0;
 		PetscViewer    viewer;
 		
 		VecGetSize(F,&size0);
@@ -497,13 +498,14 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 		
 		ierr = DMDAGetCorners(thermal_da,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
 		
-		PetscReal xx,zz,t_inic;
+		PetscReal xx,yy,zz,t_inic;
 		
 		for (k=sz; k<sz+mmz; k++) {
 			for (j=sy; j<sy+mmy; j++) {
 				for (i=sx; i<sx+mmx; i++) {
 					
 					xx = i*Lx/(M-1);
+					yy = j*Ly/(N-1);
 					zz = -(P-1-k)*depth/(P-1);
 					
 					if (T_initial_cond==0){
@@ -526,6 +528,10 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					}
 					if (T_initial_cond==3){
 						temper_aux = Temper3(xx,zz);
+					}
+					
+					if (T_initial_cond==8){
+						temper_aux = Temper4(xx,yy,zz);
 					}
 					
 					
@@ -580,6 +586,30 @@ PetscReal Temper3(double xx,double zz){
 	
 	return(Temper);
 }
+
+PetscReal Temper4(double xx,double yy,double zz){
+	PetscReal Temper;
+	
+	double t_inic = 1001.0E6*seg_per_ano;
+	Temper = Thermal_profile(t_inic, zz);
+	
+	/*if (xx<ramp_begin) Temper*=1.0;
+	else {
+		if (xx<ramp_end){
+			Temper*=(1.0+(beta_max-1.0)*(xx-ramp_begin)/(ramp_end-ramp_begin));
+		}
+		else Temper*=beta_max;
+	}*/
+	
+	Temper*=(1.0+(beta_max-1.0)*(cos(10*xx/Lx)+1.0)*(cos(10*yy/Ly)+1.0)/4.0);
+	
+	if (Temper>Delta_T) Temper = Delta_T;
+	if (Temper<0.0) Temper = 0;
+	
+	
+	return(Temper);
+}
+
 
 
 double Thermal_profile(double t, double zz){

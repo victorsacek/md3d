@@ -10,7 +10,7 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
  
 all: ${OBJECTS} chkopts
-	-${CLINKER} -o MD3D_3.5 ${OBJECTS} ${PETSC_LIB}
+	-${CLINKER} -o MD3D_3.6 ${OBJECTS} ${PETSC_LIB}
 	
 %.o: %.cpp
 	mpicc -Wall -fdiagnostics-color -c $< -o $@ ${INCFLAGS}

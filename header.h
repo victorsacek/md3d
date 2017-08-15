@@ -176,6 +176,10 @@ PetscReal *VfMe;
 PetscInt Verif_VG=0;
 
 
+Vec Precon;
+
+Vec local_Precon;
+
 Vec rk_vec2;
 
 Vec rk_vec;
@@ -184,6 +188,10 @@ Vec gs_vec;
 Vec uk_vec;
 
 Vec Veloc_Cond;
+
+
+Vec zk_vec;
+Vec zk_vec2;
 
 Vec local_V;
 Vec local_VC;

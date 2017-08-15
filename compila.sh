@@ -1,0 +1,1 @@
+mpicc -Wall main.cpp calc_drho.cpp calc_visc.cpp DM1.cpp DM1_v.cpp DMT.cpp DMv.cpp thermal_Ke.cpp reader.cpp -o MD3D_3.6

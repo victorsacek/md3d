@@ -61,6 +61,9 @@ extern Vec sk_vec;
 extern Vec gs_vec;
 extern Vec uk_vec;
 
+extern Vec zk_vec;
+extern Vec zk_vec2;
+
 extern Vec Veloc_Cond;
 
 extern Vec Pressure;
@@ -96,6 +99,10 @@ extern Vec local_P;
 extern PetscReal rtol;
 
 extern PetscReal denok_min;
+
+
+extern Vec Precon;
+extern Vec local_Precon;
 
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
@@ -171,6 +178,11 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateGlobalVector(da_Veloc,&sk_vec);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&gs_vec);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&uk_vec);CHKERRQ(ierr);
+	
+	ierr = DMCreateGlobalVector(da_Veloc,&zk_vec);CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(da_Veloc,&zk_vec2);CHKERRQ(ierr);
+	
+	ierr = DMCreateGlobalVector(da_Veloc,&Precon);CHKERRQ(ierr);
 
 	ierr = DMCreateGlobalVector(da_Veloc,&Veloc_Cond);CHKERRQ(ierr);
 	
@@ -180,6 +192,8 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateLocalVector(da_Veloc,&local_FV);CHKERRQ(ierr);
 	ierr = DMCreateLocalVector(da_Veloc,&local_FP);CHKERRQ(ierr);
 	ierr = DMCreateLocalVector(da_Veloc,&local_P);CHKERRQ(ierr);
+	
+	ierr = DMCreateLocalVector(da_Veloc,&local_Precon);CHKERRQ(ierr);
 	
 	
 	Stokes					***ff;
@@ -284,9 +298,13 @@ PetscErrorCode build_veloc_3d()
 	ierr = VecZeroEntries(Vf);CHKERRQ(ierr);
 	ierr = VecZeroEntries(Vf_P);CHKERRQ(ierr);
 	
+	ierr = VecZeroEntries(Precon);CHKERRQ(ierr);
+	
 	if (rank==0) printf("build VA,Vf\n");
 	ierr = AssembleA_Veloc(VA,VG,da_Veloc,da_Thermal);CHKERRQ(ierr);
 	if (rank==0) printf("t\n");
+	
+	ierr = VecReciprocal(Precon);
 	
 	ierr = calc_drho();CHKERRQ(ierr);
 	
@@ -344,19 +362,23 @@ PetscErrorCode solve_veloc_3d()
 	ierr = MatMultTranspose(VG,Veloc_fut,rk_vec2);CHKERRQ(ierr);
 	
 	
-	
+	ierr = VecPointwiseMult(zk_vec2,Precon,rk_vec2);
 	
 	ierr = VecDot(rk_vec2,rk_vec2,&denok);CHKERRQ(ierr);
 	
 	if (rank==0) printf("denok = %lg\n",denok);
 	
 	for (k=1;k<maxk && denok>denok_min;k++){
-		if (k==1) VecCopy(rk_vec2,sk_vec);
+		if (k==1) VecCopy(zk_vec2,sk_vec);
 		else {
-			VecDot(rk_vec2,rk_vec2,&betak);
-			VecDot(rk_vec,rk_vec,&denok);
+			VecCopy(zk_vec2,zk_vec);
+			
+			ierr = VecPointwiseMult(zk_vec2,Precon,rk_vec2);
+			
+			VecDot(zk_vec2,rk_vec2,&betak);
+			VecDot(zk_vec,rk_vec,&denok);
 			betak=betak/denok;
-			VecAYPX(sk_vec,betak,rk_vec2);
+			VecAYPX(sk_vec,betak,zk_vec2);
 		}
 		ierr = MatMult(VG,sk_vec,gs_vec);
 		
@@ -368,7 +390,7 @@ PetscErrorCode solve_veloc_3d()
 		
 		KSPSolve(V_ksp,gs_vec,uk_vec);
 		
-		VecDot(rk_vec2,rk_vec2,&alphak);
+		VecDot(zk_vec2,rk_vec2,&alphak);
 		VecDot(gs_vec,uk_vec,&denok);
 		
 		alphak=alphak/denok;
