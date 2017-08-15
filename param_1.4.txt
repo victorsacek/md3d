@@ -1,16 +1,16 @@
-10 10 10
-100.0E3 100.0E3 100.0E3
+25 25 20
+500.0E3 500.0E3 360.0E3
 mg 1
 
 stepMAX 10
 timeMAX 140.0E6
 
-dt_MAX	1.0e6
+dt_MAX	1.0e5
 
 print_step 1
 
 visc 		1.0E20
-visc_MAX	1.0E25
+visc_MAX	1.0E24
 visc_MIN	1.0E17
 
 
@@ -47,11 +47,11 @@ bcT_left	0
 
 bcT_right	0
 
-rheol	0
-T_initial	1
+rheol	6
+T_initial	3
 
 H_lito		180000.0
 
-beta_max	3.0
-ramp_begin	2000.0E3
-ramp_end	2200.0E3
+beta_max	1.4
+ramp_begin	200.0E3
+ramp_end	220.0E3

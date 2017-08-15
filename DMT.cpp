@@ -49,7 +49,6 @@ extern KSP T_ksp;
 
 extern DM da_Thermal;
 
-
 extern Vec Veloc, Veloc_fut;
 
 

@@ -335,7 +335,7 @@ PetscErrorCode solve_veloc_3d()
 	
 	PetscReal denok=0,betak,alphak;
 	
-	PetscInt maxk = 40,k;
+	PetscInt maxk = 400,k;
 	
 	ierr = KSPSolve(V_ksp,Vf_P,Veloc_fut);CHKERRQ(ierr);
 	
@@ -384,7 +384,9 @@ PetscErrorCode solve_veloc_3d()
 		VecAYPX(rk_vec2,-alphak,rk_vec);
 		
 		VecDot(rk_vec2,rk_vec2,&denok);
+		
 		if (rank==0) printf("denok = %lg, k=%d\n",denok,k);
+		
 	}
 	
 	

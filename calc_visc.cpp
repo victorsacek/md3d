@@ -1,4 +1,5 @@
 #include <petscksp.h>
+//#include <stdio.h>
 #include <math.h>
 
 extern int rheol;
@@ -115,8 +116,28 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		return(visco_real);
 	}
 	
+	if (rheol==6){
+		double R = 8.31;     // J/mol/K
+		double E = 240000.0; // J/mol
+		
+		double b = 1.0E7;
+		
+		
+		double Tb = Delta_T+273.0;
+		
+		double aux = -(T+273)*E/(R*Tb*Tb);
+		double visco_real = visco_r*b*exp(aux);
+		
+		if (visco_real>visc_MAX) visco_real=visc_MAX;
+		if (visco_real<visc_MIN) visco_real=visc_MIN;
+		
+		//printf("%lg ",visco_real);
+		
+		return(visco_real);
+	}
 	
-	if (rheol>5){
+	
+	if (rheol>6){
 		printf("rheol error: larger than maximum available option\n");
 		exit(1);
 	}

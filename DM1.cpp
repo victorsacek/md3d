@@ -27,7 +27,20 @@ extern Vec Temper_Cond;
 
 extern double Delta_T;
 
+extern double Lx, Ly, depth;
+
 extern int T_initial_cond;
+
+extern double seg_per_ano;
+
+extern double kappa;
+
+
+extern double beta_max;
+extern double ramp_begin;
+extern double ramp_end;
+
+extern double H_lito;
 
 extern Vec local_FT;
 extern Vec local_Temper;
@@ -38,6 +51,9 @@ extern Vec local_V;
 
 extern PetscInt temper_extern;
 
+double Thermal_profile(double t, double zz);
+
+PetscReal Temper3(double xx,double zz);
 
 
 typedef struct {
@@ -481,10 +497,14 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 		
 		ierr = DMDAGetCorners(thermal_da,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
 		
+		PetscReal xx,zz,t_inic;
+		
 		for (k=sz; k<sz+mmz; k++) {
 			for (j=sy; j<sy+mmy; j++) {
 				for (i=sx; i<sx+mmx; i++) {
 					
+					xx = i*Lx/(M-1);
+					zz = -(P-1-k)*depth/(P-1);
 					
 					if (T_initial_cond==0){
 						temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(i*3.14159/(M-1));
@@ -493,6 +513,21 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					if (T_initial_cond==1){
 						temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(j*3.14159/(N-1))*cos(i*3.14159/(M-1));
 					}
+					if (T_initial_cond==2){
+						if (xx<1500.E3) t_inic = 1001.0E6*seg_per_ano;
+						else {
+							if (xx<2000.E3){
+								t_inic = 1000.0E6*seg_per_ano;
+							}
+							else t_inic = 1001.0E6*seg_per_ano;
+						}
+						
+						temper_aux = Thermal_profile(t_inic, zz);
+					}
+					if (T_initial_cond==3){
+						temper_aux = Temper3(xx,zz);
+					}
+					
 					
 					if (T_initial_cond==74){
 						t1_aux = 0.5*tan((P-1-k)*3./(P-1)-1.5)/tan(1.5)+0.5;
@@ -524,4 +559,50 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	PetscFunctionReturn(0);
 	
 }
+
+PetscReal Temper3(double xx,double zz){
+	PetscReal Temper;
+	
+	double t_inic = 1001.0E6*seg_per_ano;
+	Temper = Thermal_profile(t_inic, zz);
+	
+	if (xx<ramp_begin) Temper*=1.0;
+	else {
+		if (xx<ramp_end){
+			Temper*=(1.0+(beta_max-1.0)*(xx-ramp_begin)/(ramp_end-ramp_begin));
+		}
+		else Temper*=beta_max;
+	}
+	
+	if (Temper>Delta_T) Temper = Delta_T;
+	if (Temper<0.0) Temper = 0;
+	
+	
+	return(Temper);
+}
+
+
+double Thermal_profile(double t, double zz){
+	
+	double T_q = Delta_T;
+	double a_q = H_lito;
+	
+	double PI = 3.14159;
+	
+	double z = -zz;
+	
+	double T = z/a_q;
+	
+	for (long n=1;n<100;n++){
+		T+=(2.0/PI)*sin(n*PI*z/a_q)*exp(-n*n*PI*PI*kappa*t/(a_q*a_q))/n;
+	}
+	
+	T*=T_q;
+	
+	if (T>T_q) T=T_q;
+	
+	
+	return(T);
+}
+
 
