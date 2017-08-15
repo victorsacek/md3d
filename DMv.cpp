@@ -86,8 +86,6 @@ extern double dx_const;
 extern double dy_const;
 extern double dz_const;
 
-extern Vec Veloc_Cond;
-
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
@@ -203,14 +201,14 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 				
 				if (j==0 || j==N-1) ff[k][j][i].v = 0.0;
 				
-				if (k==0   && bcv_bot_normal) ff[k][j][i].w = 0.0;
-				if (k==0   && bcv_bot_slip){
+				if (k==0   && bcv_bot_normal==1) ff[k][j][i].w = 0.0;
+				if (k==0   && bcv_bot_slip==1){
 					ff[k][j][i].u = 0.0;
 					ff[k][j][i].v = 0.0;
 				}
 				
-				if (k==P-1 && bcv_top_normal) ff[k][j][i].w = 0.0;
-				if (k==P-1 && bcv_top_slip){
+				if (k==P-1 && bcv_top_normal==1) ff[k][j][i].w = 0.0;
+				if (k==P-1 && bcv_top_slip==1){
 					ff[k][j][i].u = 0.0;
 					ff[k][j][i].v = 0.0;
 				}

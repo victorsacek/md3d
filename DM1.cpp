@@ -23,6 +23,12 @@ extern PetscReal *v_vec_aux_ele;
 
 extern Vec Temper;
 
+extern Vec Temper_Cond;
+
+extern double Delta_T;
+
+extern int T_initial_cond;
+
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
@@ -106,12 +112,29 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 	
 	
 	
+	////////
+	
+	PetscScalar					***TTC;
+	Vec						local_TC;
+	
+	ierr = DMGetLocalVector(thermal_da,&local_TC);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_TC);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(thermal_da,Temper_Cond,INSERT_VALUES,local_TC);
+	ierr = DMGlobalToLocalEnd(  thermal_da,Temper_Cond,INSERT_VALUES,local_TC);
+	
+	ierr = DMDAVecGetArray(thermal_da,local_TC,&TTC);CHKERRQ(ierr);
+	
+	////////
+	
+	
+	
 	PetscInt               M,N,P;
 
 	
 	MatStencil ind1[1],ind[8];
 	
-	PetscScalar ONE[1]={1.0},u[8*8];
+	PetscScalar u[8*8],val_cond[1];
 	
 	PetscFunctionBeginUser;
 	ierr = DMDAGetInfo(thermal_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
@@ -129,12 +152,14 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
-				if (k==0 || k==P-1){
-					ind1[0].i = i;
-					ind1[0].j = j;
-					ind1[0].k = k;
-					ierr = MatSetValuesStencil(A,1,ind1,1,ind1,ONE,ADD_VALUES);
-				}
+			
+				ind1[0].i = i;
+				ind1[0].j = j;
+				ind1[0].k = k;
+				
+				val_cond[0] = 1.0-TTC[k][j][i];
+				ierr = MatSetValuesStencil(A,1,ind1,1,ind1,val_cond,ADD_VALUES);
+				
 			}
 		}
 	}
@@ -166,7 +191,7 @@ PetscErrorCode AssembleA_Thermal(Mat A,DM thermal_da,PetscReal *TKe,PetscReal *T
 				
 				
 				for (i=0;i<8;i++){
-					if (ind[i].k==0 || ind[i].k==P-1){
+					if (TTC[ind[i].k][ind[i].j][ind[i].i]==0){
 						for (j=0;j<8;j++) u[i*8+j]=0.0;
 					}
 					else {
@@ -217,6 +242,22 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	ierr = DMGlobalToLocalEnd(  veloc_da,Veloc_total,INSERT_VALUES,local_V);
 	
 	ierr = DMDAVecGetArray(veloc_da,local_V,&VV);CHKERRQ(ierr);
+	
+	
+	////////
+	
+	PetscScalar					***TTC;
+	Vec						local_TC;
+	
+	ierr = DMGetLocalVector(thermal_da,&local_TC);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_TC);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(thermal_da,Temper_Cond,INSERT_VALUES,local_TC);
+	ierr = DMGlobalToLocalEnd(  thermal_da,Temper_Cond,INSERT_VALUES,local_TC);
+	
+	ierr = DMDAVecGetArray(thermal_da,local_TC,&TTC);CHKERRQ(ierr);
+	
+	////////
 	
 	
 	
@@ -296,7 +337,8 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 				}
 				
 				for (i=0;i<8;i++){
-					if (ind[i].k==0 || ind[i].k==P-1){
+					//if (ind[i].k==0 || ind[i].k==P-1){
+					if (TTC[ind[i].k][ind[i].j][ind[i].i]==0){
 						T_vec_aux_ele_final[i]=0.0;
 					}
 				}
@@ -330,9 +372,9 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
-				if (k==0 || k==P-1){
-					if (k==0) ff[k][j][i]=tt[k][j][i];
-					else ff[k][j][i]=tt[k][j][i];
+				//if (k==0 || k==P-1){
+				if (TTC[k][j][i]==0){
+					ff[k][j][i]=tt[k][j][i];
 				}
 			}
 		}
@@ -382,18 +424,31 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	
 	ierr = DMDAGetCorners(thermal_da,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
 	
-	PetscReal temper_aux;
+	PetscReal temper_aux,t1_aux;
 	
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
-				//if (k>P*0.5) ff[k][j][i]=1300.0;
-				//else ff[k][j][i]=(1300.0*k)/(P*0.5)
-				temper_aux=(1300.0*(P-1-k))/(P-1) + 10*cos(j*3.14159/(N-1))*cos(i*3.14159/(M-1));
-				if (k==P-1) temper_aux=0.0;
-				if (k==0) temper_aux=1300.0;
 				
-				if (temper_aux>1300.0) temper_aux=1300.0;
+				
+				if (T_initial_cond==0){
+					temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(i*3.14159/(M-1));
+				}
+				
+				if (T_initial_cond==1){
+					temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(j*3.14159/(N-1))*cos(i*3.14159/(M-1));
+				}
+				
+				if (T_initial_cond==74){
+					t1_aux = 0.5*tan((P-1-k)*3./(P-1)-1.5)/tan(1.5)+0.5;
+					temper_aux=Delta_T*t1_aux + Delta_T*0.2*tan(i*3./(M-1)-1.5);
+				}
+				
+				
+				if (k==P-1) temper_aux=0.0;
+				if (k==0) temper_aux=Delta_T;
+				
+				if (temper_aux>Delta_T) temper_aux=Delta_T;
 				if (temper_aux<0.0) temper_aux=0.0;
 				
 				ff[k][j][i]=temper_aux;

@@ -24,7 +24,7 @@ double seg_per_ano = 365.0*24.0*3600.0;
 double dt_calor = 40000.0;
 double dt_calor_sec=dt_calor*seg_per_ano;
 
-double tempo;
+double tempo=0;
 
 
 double alpha_thermal=0.5;
@@ -106,6 +106,8 @@ PetscReal *TKe, *TCe, *TFe, *TCe_fut, *TMe, *Ttotal, *Ttotal_b;
 PetscReal *T_vec_aux_ele;
 PetscReal *T_vec_aux_ele_final;
 
+
+
 double r06 = 0.7745966692414834; //sqrt(0.6)
 double r8p9 = 8.0/9.0;
 double r5p9 = 5.0/9.0;
@@ -136,6 +138,8 @@ Vec dRho;
 DM da_Thermal;
 
 KSP T_ksp;
+
+Vec Temper_Cond;
 
 
 /////////

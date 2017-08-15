@@ -55,6 +55,14 @@ extern Vec Veloc, Veloc_fut;
 
 extern DM da_Veloc;
 
+extern Vec Temper_Cond;
+
+
+extern int bcT_top;
+extern int bcT_bot;
+extern int bcT_left;
+extern int bcT_right;
+
 
 PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
@@ -133,6 +141,60 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	
 	
 	
+	
+	///////
+	ierr = DMCreateGlobalVector(da_Thermal,&Temper_Cond);CHKERRQ(ierr);
+	
+	
+	PetscScalar					***ff;
+	PetscInt               M,N,P;
+	
+	ierr = DMDAGetInfo(da_Thermal,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
+	
+	
+	Vec                    local_F;
+	
+	ierr = DMGetLocalVector(da_Thermal,&local_F);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_F);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(da_Thermal,local_F,&ff);CHKERRQ(ierr);
+	
+	PetscInt       sx,sy,sz,mmx,mmy,mmz;
+	PetscInt i,j,k;
+	
+	ierr = DMDAGetCorners(da_Thermal,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+	
+	for (k=sz; k<sz+mmz; k++) {
+		for (j=sy; j<sy+mmy; j++) {
+			for (i=sx; i<sx+mmx; i++) {
+				ff[k][j][i] = 1.0;
+				
+				if (i==0   && bcT_left==1) ff[k][j][i] = 0.0;
+				
+				
+				if (i==M-1 && bcT_right==1)ff[k][j][i] = 0.0;
+				
+				
+				if (k==0   && bcT_bot==1) ff[k][j][i] = 0.0;
+				
+				
+				if (k==P-1 && bcT_top==1) ff[k][j][i] = 0.0;
+				
+			}
+		}
+	}
+	
+	ierr = DMDAVecRestoreArray(da_Thermal,local_F,&ff);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Thermal,local_F,INSERT_VALUES,Temper_Cond);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Thermal,local_F,INSERT_VALUES,Temper_Cond);CHKERRQ(ierr);
+	ierr = DMRestoreLocalVector(da_Thermal,&local_F);CHKERRQ(ierr);
+	
+	
+	///////
+	
+	
+	
+	
+	
 	ierr = KSPCreate(PETSC_COMM_WORLD,&T_ksp);CHKERRQ(ierr);
 	ierr = KSPSetOptionsPrefix(T_ksp,"thermal_"); /* stokes */ CHKERRQ(ierr);
 	
@@ -155,19 +217,19 @@ PetscErrorCode build_thermal_3d()
 	PetscLogDouble Tempo1p,Tempo2p;
 	
 	PetscTime(&Tempo1p);
-	//if (rank==0) printf("TA,TB,Tf -> zero entries\n");
+	if (rank==0) printf("TA,TB,Tf -> zero entries\n");
 	ierr = MatZeroEntries(TA);CHKERRQ(ierr);
-	//if (rank==0) printf("passou TA\n");
+	if (rank==0) printf("passou TA\n");
 	ierr = MatZeroEntries(TB);CHKERRQ(ierr);
 	ierr = VecZeroEntries(Tf);CHKERRQ(ierr);
 	
-	//if (rank==0) printf("build TA,Tf\n");
+	if (rank==0) printf("build TA,Tf\n");
 	ierr = AssembleA_Thermal(TA,da_Thermal,TKe,TMe,TFe,da_Veloc,Veloc_fut);CHKERRQ(ierr);
-	//if (rank==0) printf("t\n");
+	if (rank==0) printf("t\n");
 	
 	
 	ierr = AssembleF_Thermal(Tf,da_Thermal,TKe,TMe,TFe,da_Veloc,Veloc);CHKERRQ(ierr);
-	//if (rank==0) printf("t\n");
+	if (rank==0) printf("t\n");
 
 	
 	PetscTime(&Tempo2p);

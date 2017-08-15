@@ -7,6 +7,8 @@ static char help[] = "S1\n";
 
 #include <petsctime.h>
 
+#include "petscsys.h"
+
 #include "header.h"
 
 
@@ -33,6 +35,8 @@ PetscErrorCode write_veloc_3d(int cont);
 PetscErrorCode destroy_veloc_3d();
 
 PetscErrorCode Calc_dt_calor();
+
+PetscErrorCode write_tempo(int cont);
 
 
 
@@ -81,11 +85,12 @@ int main(int argc,char **args)
 	
 	ierr = write_veloc_3d(tcont);
 	ierr = write_thermal_3d(tcont);
+	ierr = write_tempo(tcont);
 	
 	
 	ierr = Calc_dt_calor();
 	
-	for (tempo = dt_calor;tempo<timeMAX && tcont<stepMAX;tempo+=dt_calor, tcont++){
+	for (tempo = dt_calor,tcont=1;tempo<=timeMAX && tcont<=stepMAX;tempo+=dt_calor, tcont++){
 		
 		
 		
@@ -101,6 +106,7 @@ int main(int argc,char **args)
 		if (tcont%print_step==0){
 			ierr = write_thermal_3d(tcont);
 			ierr = write_veloc_3d(tcont);
+			ierr = write_tempo(tcont);
 		}
 		
 		
@@ -155,3 +161,32 @@ PetscErrorCode Calc_dt_calor(){
 	PetscFunctionReturn(0);
 	
 }
+
+
+PetscErrorCode write_tempo(int cont){
+
+	int rank;
+	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+	
+	PetscViewer viewer;
+	
+	char nome[100];
+	
+	sprintf(nome,"Tempo_%d.txt",cont);
+	
+	PetscReal aa[1];
+	
+	aa[0]=tempo;
+	
+	PetscViewerASCIIOpen(PETSC_COMM_WORLD,nome,&viewer);
+	PetscRealView(1,aa,viewer);
+	PetscViewerDestroy(&viewer);
+	
+	if (rank==0) printf("Tempo: %lf\n",tempo);
+	
+	
+	
+	PetscFunctionReturn(0);
+	
+}
+

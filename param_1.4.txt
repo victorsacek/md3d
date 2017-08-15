@@ -1,9 +1,9 @@
-20 20 20
+10 10 10
 2700.0E3 2700.0E3 2700.0E3
 mg 1
 
-stepMAX 1
-timeMAX 140.0E6
+stepMAX 20
+timeMAX 140000.0E6
 
 dt_MAX	1.0e9
 
