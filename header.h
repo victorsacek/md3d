@@ -169,6 +169,7 @@ Vec sk_vec;
 Vec gs_vec;
 Vec uk_vec;
 
-Vec CondOne;
+Vec Veloc_Cond;
+
 
 

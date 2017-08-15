@@ -5,14 +5,14 @@
 
 PetscErrorCode DMDAGetElementCorners(DM da,PetscInt *sx,PetscInt *sy,PetscInt *sz,PetscInt *mx,PetscInt *my,PetscInt *mz);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal visco_const);
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele);
+
 
 
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
 	PetscScalar w;
-	//PetscScalar p;
 } Stokes;
 
 
@@ -35,11 +35,15 @@ extern DM da_Veloc;
 
 extern Vec dRho;
 
+extern Vec Temper;
+
 extern PetscInt Verif_VG;
 
 extern double visco_r;
 
-PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
+extern Vec Veloc_Cond;
+
+PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	PetscErrorCode         ierr;
 	
@@ -47,12 +51,22 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
 	
 	PetscInt               M,N,P;
 	
-	MatStencil ind1[1],ind[V_GT], indp[1];
+	MatStencil indr[T_NE],ind1[1],ind[V_GT], indp[1];
 	
-	PetscScalar ONE[1]={1.0},u[V_GT*V_GT];
+	PetscScalar ONE[1]={1.0},u[V_GT*V_GT],val_cond[1];
 	
-	//PetscScalar VCe_aux[V_GT];
+	/////
+	Stokes					***VVC;
+	Vec						local_VC;
 	
+	ierr = DMGetLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_VC);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_Cond,INSERT_VALUES,local_VC);
+	ierr = DMGlobalToLocalEnd(  veloc_da,Veloc_Cond,INSERT_VALUES,local_VC);
+	
+	ierr = DMDAVecGetArray(veloc_da,local_VC,&VVC);CHKERRQ(ierr);
+	//////
 	
 	PetscInt       sx,sy,sz,mmx,mmy,mmz;
 	
@@ -63,22 +77,20 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
-				if (i==0 || i==M-1){
-					ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 0;
-					ierr = MatSetValuesStencil(A,1,ind1,1,ind1,ONE,ADD_VALUES);
-				}
-				if (j==0 || j==N-1){
-					ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 1;
-					ierr = MatSetValuesStencil(A,1,ind1,1,ind1,ONE,ADD_VALUES);
-				}
-				if (k==0 || k==P-1){
-					ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 2;
-					ierr = MatSetValuesStencil(A,1,ind1,1,ind1,ONE,ADD_VALUES);
-				}
-				/*if (i==M-1 || j==N-1 || k==P-1){
-					ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 3;
-					ierr = MatSetValuesStencil(A,1,ind1,1,ind1,ONE,ADD_VALUES);
-				}*/
+				
+				ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 0;
+				val_cond[0] = 1.0-VVC[k][j][i].u;
+				ierr = MatSetValuesStencil(A,1,ind1,1,ind1,val_cond,ADD_VALUES);
+
+				ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 1;
+				val_cond[0] = 1.0-VVC[k][j][i].v;
+				ierr = MatSetValuesStencil(A,1,ind1,1,ind1,val_cond,ADD_VALUES);
+				
+				ind1[0].i = i; ind1[0].j = j; ind1[0].k = k; ind1[0].c = 2;
+				val_cond[0] = 1.0-VVC[k][j][i].w;
+				ierr = MatSetValuesStencil(A,1,ind1,1,ind1,val_cond,ADD_VALUES);
+				
+				
 			}
 		}
 	}
@@ -90,15 +102,49 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
 	
 	ierr = DMDAGetElementCorners(veloc_da,&sex,&sey,&sez,&mx,&my,&mz);CHKERRQ(ierr);
 	
-	//printf("%d %d %d %d %d %d\n",sez,sez+mz-1,sey,sey+my-1,sex,sex+mx-1);
+	//////////
+	
+	
+	Vec local_temper;
+	PetscScalar             ***tt;
+	
+	
+	ierr = DMGetLocalVector(temper_da,&local_temper);CHKERRQ(ierr);
+	
+	ierr = VecZeroEntries(local_temper);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(temper_da,Temper,INSERT_VALUES,local_temper);
+	ierr = DMGlobalToLocalEnd(  temper_da,Temper,INSERT_VALUES,local_temper);
+	
+	ierr = DMDAVecGetArray(temper_da,local_temper,&tt);CHKERRQ(ierr);
+	
+
+	ierr = DMRestoreLocalVector(temper_da,&local_temper);CHKERRQ(ierr);
+	
 	
 	PetscReal volume = dx_const*dy_const*dz_const;
+	
+	
+	PetscReal temper_ele[T_NE];
+	
 
 	for (ek = sez; ek < sez+mz; ek++) {
 		for (ej = sey; ej < sey+my; ej++) {
 			for (ei = sex; ei < sex+mx; ei++) {
 				
-				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,visco_r );
+				
+				indr[0].i=ei  ; indr[0].j=ej  ; indr[0].k=ek  ;
+				indr[1].i=ei+1; indr[1].j=ej  ; indr[1].k=ek  ;
+				indr[2].i=ei  ; indr[2].j=ej+1; indr[2].k=ek  ;
+				indr[3].i=ei+1; indr[3].j=ej+1; indr[3].k=ek  ;
+				indr[4].i=ei  ; indr[4].j=ej  ; indr[4].k=ek+1;
+				indr[5].i=ei+1; indr[5].j=ej  ; indr[5].k=ek+1;
+				indr[6].i=ei  ; indr[6].j=ej+1; indr[6].k=ek+1;
+				indr[7].i=ei+1; indr[7].j=ej+1; indr[7].k=ek+1;
+				
+				for (i=0;i<T_NE;i++) temper_ele[i]=tt[indr[i].k][indr[i].j][indr[i].i];
+				
+				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele);
 				
 				for (i=0;i<V_GT*V_GT;i++) Ke_veloc_final[i]=Ke_veloc[i]*volume;
 				
@@ -138,15 +184,16 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
 				
 				for (n=0;n<8;n++){
 					g = 3*n;
-					if (ind[g].i==0 || ind[g].i==M-1){
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].u==0){
 						for (j=0;j<V_GT;j++) u[g*V_GT+j]=0.0;
 					}
 					else {
 						for (j=0;j<V_GT;j++) u[g*V_GT+j]=Ke_veloc_final[g*V_GT+j];
+
 					}
 					
 					g = 3*n+1;
-					if (ind[g].j==0 || ind[g].j==N-1){
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].v==0){
 						for (j=0;j<V_GT;j++) u[g*V_GT+j]=0.0;
 					}
 					else {
@@ -154,32 +201,18 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
 					}
 					
 					g = 3*n+2;
-					if (ind[g].k==0 || ind[g].k==P-1){
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].w==0){
 						for (j=0;j<V_GT;j++) u[g*V_GT+j]=0.0;
 					}
 					else {
 						for (j=0;j<V_GT;j++) u[g*V_GT+j]=Ke_veloc_final[g*V_GT+j];
 					}
+					
 				}
 				
 				ierr = MatSetValuesStencil(A,V_GT,ind,V_GT,ind,u,ADD_VALUES);
 				
-				///
 				
-				//for (i=0;i<V_GT;i++) VCe_aux[i]=VCe[i];
-				
-				/*
-				for (n=0;n<8;n++){
-					g = 3*n;
-					if (ind[g].i==0 || ind[g].i==M-1)	VCe_aux[g]=0.0;
-					
-					g = 3*n+1;
-					if (ind[g].j==0 || ind[g].j==N-1)	VCe_aux[g]=0.0;
-					
-					g = 3*n+2;
-					if (ind[g].k==0 || ind[g].k==P-1)	VCe_aux[g]=0.0;
-				}*/
-				//ierr = MatSetValuesStencil(A,V_GT,ind,1,indp,VCe_aux,ADD_VALUES);
 				
 				
 				if (Verif_VG==0){
@@ -203,15 +236,10 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da){
 		Verif_VG=1;
 	}
 	
-	/*char nome[100];
-	PetscViewer viewer;
-	sprintf(nome,"A_veloc.txt");
 	
-	PetscViewerASCIIOpen(PETSC_COMM_WORLD,nome,&viewer);
-	MatView(A,viewer);
-	PetscViewerDestroy(&viewer);*/
+	ierr = DMRestoreLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
 	
-	//printf("passou!!!\n");
+	
 	
 	
 	PetscFunctionReturn(0);
@@ -250,6 +278,23 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 	ierr = DMGlobalToLocalEnd(  drho_da,dRho,INSERT_VALUES,local_dRho);
 	
 	ierr = DMDAVecGetArray(drho_da,local_dRho,&rr);CHKERRQ(ierr);
+	
+	
+	/////
+	Stokes					***VVC;
+	Vec						local_VC;
+	
+	ierr = DMGetLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_VC);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_Cond,INSERT_VALUES,local_VC);
+	ierr = DMGlobalToLocalEnd(  veloc_da,Veloc_Cond,INSERT_VALUES,local_VC);
+	
+	ierr = DMDAVecGetArray(veloc_da,local_VC,&VVC);CHKERRQ(ierr);
+	//////
+
+	
+	
 	
 	PetscInt i,j,c,n,g;
 	
@@ -332,13 +377,13 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 				
 				for (n=0;n<8;n++){
 					g = 3*n;
-					if (ind[g].i==0 || ind[g].i==M-1)	Vfe[g]=0.0;
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].u==0)	Vfe[g]=0.0;
 					
 					g = 3*n+1;
-					if (ind[g].j==0 || ind[g].j==N-1)	Vfe[g]=0.0;
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].v==0)	Vfe[g]=0.0;
 					
 					g = 3*n+2;
-					if (ind[g].k==0 || ind[g].k==P-1)	Vfe[g]=0.0;
+					if (VVC[indr[n].k][indr[n].j][indr[n].i].w==0)	Vfe[g]=0.0;
 				}
 				
 				
@@ -377,6 +422,8 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da){
 	ierr = DMRestoreLocalVector(veloc_da,&local_F);CHKERRQ(ierr);
 	
 	ierr = DMRestoreLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
+	
+	ierr = DMRestoreLocalVector(veloc_da,&local_VC);CHKERRQ(ierr);
 	
 	//printf("passou...\n");
 	

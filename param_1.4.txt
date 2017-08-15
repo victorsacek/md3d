@@ -1,26 +1,26 @@
-50 50 50
-200.0E3 200.0E3 200.0E3
+20 20 20
+2700.0E3 2700.0E3 2700.0E3
 mg 1
 
 stepMAX 1
 timeMAX 140.0E6
 
-dt_MAX	1.0e6
+dt_MAX	1.0e9
 
 print_step 10
 
-visc 		5.0E19
-visc_MAX	1.0E25
+visc 		1.20165E24
+visc_MAX	1.0E27
 visc_MIN	1.0E17
 
 
-geoq_fac 	100.0
+geoq_fac 	1.0
 veloc 		0.0E-2
 
 deltaT 		1300.
 alpha_exp_thermo 3.28E-5
 kappa 		1.0E-6
-gravity		9.8
+gravity		1.0
 rhom		3300. 
 
 H_per_mass	0.0E-12
@@ -47,7 +47,7 @@ bcT_left	0
 
 bcT_right	0
 
-rheol	0
+rheol	1
 T_initial	3
 
 H_lito		180000.0

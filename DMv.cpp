@@ -3,6 +3,20 @@
 
 #include <petsctime.h>
 
+
+extern int bcv_top_normal;
+extern int bcv_top_slip;
+
+extern int bcv_bot_normal;
+extern int bcv_bot_slip;
+
+extern int bcv_left_normal;
+extern int bcv_left_slip;
+
+extern int bcv_right_normal;
+extern int bcv_right_slip;
+
+
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
@@ -10,13 +24,13 @@ typedef struct {
 	//PetscScalar p;
 } Stokes;
 
-PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da);
+PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da);
 
 PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da);
 
 PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_const, double dz_const);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke, long t,PetscReal *KeG, Vec visc_vec,PetscInt *Hexa_thermal);
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele);
 
 PetscErrorCode montaCeVeloc(PetscReal *Ce);
 
@@ -25,6 +39,8 @@ PetscErrorCode montafeVeloc(PetscReal *fMe);
 PetscErrorCode calc_drho();
 
 PetscErrorCode write_veloc_3d(int cont);
+
+double calc_visco_ponto(double T,double z,double geoq_ponto);
 
 extern double r06;
 extern double r8p9;
@@ -45,7 +61,7 @@ extern Vec sk_vec;
 extern Vec gs_vec;
 extern Vec uk_vec;
 
-extern Vec CondOne;
+extern Vec Veloc_Cond;
 
 extern Vec Pressure;
 
@@ -69,6 +85,8 @@ extern PetscReal *Vfe;
 extern double dx_const;
 extern double dy_const;
 extern double dz_const;
+
+extern Vec Veloc_Cond;
 
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
@@ -144,7 +162,7 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateGlobalVector(da_Veloc,&gs_vec);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&uk_vec);CHKERRQ(ierr);
 
-	ierr = DMCreateGlobalVector(da_Veloc,&CondOne);CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(da_Veloc,&Veloc_Cond);CHKERRQ(ierr);
 	
 	
 	Stokes					***ff;
@@ -167,48 +185,57 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
-				if (i==0 || i==M-1) ff[k][j][i].u = 0.0;
-				else				ff[k][j][i].u = 1.0;
+				ff[k][j][i].u = 1.0;
+				ff[k][j][i].v = 1.0;
+				ff[k][j][i].w = 1.0;
+				
+				if (i==0   && bcv_left_normal==1) ff[k][j][i].u = 0.0;
+				if (i==0   && bcv_left_slip==1) {
+						ff[k][j][i].v = 0.0;
+						ff[k][j][i].w = 0.0;
+				}
+				
+				if (i==M-1 && bcv_right_normal==1)ff[k][j][i].u = 0.0;
+				if (i==M-1   && bcv_right_slip==1) {
+					ff[k][j][i].v = 0.0;
+					ff[k][j][i].w = 0.0;
+				}
+				
 				if (j==0 || j==N-1) ff[k][j][i].v = 0.0;
-				else				ff[k][j][i].v = 1.0;
-				if (k==0 || k==P-1) ff[k][j][i].w = 0.0;
-				else				ff[k][j][i].w = 1.0;
+				
+				if (k==0   && bcv_bot_normal) ff[k][j][i].w = 0.0;
+				if (k==0   && bcv_bot_slip){
+					ff[k][j][i].u = 0.0;
+					ff[k][j][i].v = 0.0;
+				}
+				
+				if (k==P-1 && bcv_top_normal) ff[k][j][i].w = 0.0;
+				if (k==P-1 && bcv_top_slip){
+					ff[k][j][i].u = 0.0;
+					ff[k][j][i].v = 0.0;
+				}
 				
 			}
 		}
 	}
 	
 	ierr = DMDAVecRestoreArray(da_Veloc,local_F,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(da_Veloc,local_F,INSERT_VALUES,CondOne);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(da_Veloc,local_F,INSERT_VALUES,CondOne);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Veloc,local_F,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Veloc,local_F,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
 	ierr = DMRestoreLocalVector(da_Veloc,&local_F);CHKERRQ(ierr);
 	
 	int ind;
 	PetscReal r;
 	
-	VecMax(CondOne,&ind,&r);
+	VecMax(Veloc_Cond,&ind,&r);
 	
-	if (rank==0) printf("VecMax CondOne: %f\n",r);
+	if (rank==0) printf("VecMax Veloc_Cond: %f\n",r);
 	
-	VecSum(CondOne,&r);
+	VecSum(Veloc_Cond,&r);
 	
-	if (rank==0) printf("VecSum CondOne: %f\n",r);
+	if (rank==0) printf("VecSum Veloc_Cond: %f\n",r);
 	
 	
-	/*
-	ierr = Thermal_init(Temper,da_Thermal);
-	
-	PetscViewer viewer;
-	
-	char nome[100];
-	
-	sprintf(nome,"Temper_0.txt");
-	
-	PetscViewerASCIIOpen(PETSC_COMM_WORLD,nome,&viewer);
-	VecView(Temper,viewer);
-	PetscViewerDestroy(&viewer);
-	
-	*/
 	
 	ierr = KSPCreate(PETSC_COMM_WORLD,&V_ksp);CHKERRQ(ierr);
 	ierr = KSPSetOptionsPrefix(V_ksp,"veloc_"); CHKERRQ(ierr);
@@ -244,7 +271,7 @@ PetscErrorCode build_veloc_3d()
 	ierr = VecZeroEntries(Vf);CHKERRQ(ierr);
 	
 	if (rank==0) printf("build VA,Vf\n");
-	ierr = AssembleA_Veloc(VA,VG,da_Veloc);CHKERRQ(ierr);
+	ierr = AssembleA_Veloc(VA,VG,da_Veloc,da_Thermal);CHKERRQ(ierr);
 	if (rank==0) printf("t\n");
 	
 	ierr = calc_drho();CHKERRQ(ierr);
@@ -270,7 +297,6 @@ PetscErrorCode solve_veloc_3d()
 	
 	int rank;
 	
-	PetscViewer viewer;
 	
 	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
 	
@@ -289,7 +315,6 @@ PetscErrorCode solve_veloc_3d()
 	
 	ierr = KSPSetTolerances(V_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
 	
-	char nome[100];
 	
 	////////
 	
@@ -320,7 +345,7 @@ PetscErrorCode solve_veloc_3d()
 		}
 		ierr = MatMult(VG,sk_vec,gs_vec);
 		
-		VecPointwiseMult(gs_vec,gs_vec,CondOne);
+		VecPointwiseMult(gs_vec,gs_vec,Veloc_Cond);
 		
 		VecDot(gs_vec,gs_vec,&denok);
 		if (rank==0) printf("Gs = %lg, k=%d\n",denok,k);
@@ -523,11 +548,11 @@ PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_c
 
 
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal visco_const){
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele){
 	
 	long i,j;
 	
-	double Visc_local;
+	double Visc_local,Temper_local;
 	
 	
 	double kx,ky,kz;
@@ -536,9 +561,9 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal visc
 	
 	long cont;
 	
-	PetscReal Visc_ele[V_NE];
+	//PetscReal Visc_ele[V_NE];
 	
-	for (i=0;i<V_NE;i++) Visc_ele[i]=visco_const;
+	//for (i=0;i<V_NE;i++) Visc_ele[i]=visco_const;
 	
 	//VecGetValues(visc_vec,V_NE,&Hexa_thermal[t*V_NE],Visc_ele);
 	
@@ -561,18 +586,20 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal visc
 				if (kz==0) Hz=r8p9;
 				else Hz=r5p9;
 				
-				Visc_local = 0.0;
+				Temper_local = 0.0;
 				
 				prodH = Hx*Hy*Hz;
 				cont=0;
 				for (ez=-1.;ez<=1.;ez+=2.){
 					for (ey=-1.;ey<=1.;ey+=2.){
 						for (ex=-1.;ex<=1.;ex+=2.){
-							Visc_local+=Visc_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
+							Temper_local+=Temper_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
 							cont++;
 						}
 					}
 				}
+				
+				Visc_local = calc_visco_ponto(Temper_local,0.0/*(z) mudar!!!!*/,1.0/*(geoq) mudar!!!*/);
 				
 				for (i=0;i<V_GT;i++){
 					for (j=0;j<V_GT;j++){
