@@ -171,4 +171,6 @@ Vec uk_vec;
 
 Vec CondOne;
 
+int pressure_0_true=0;
+
 

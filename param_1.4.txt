@@ -1,13 +1,13 @@
-50 50 50
-200.0E3 200.0E3 200.0E3
+50 50 20
+1000.0E3 1000.0E3 100.0E3
 mg 1
 
-stepMAX 1
+stepMAX 300
 timeMAX 140.0E6
 
 dt_MAX	1.0e6
 
-print_step 10
+print_step 100
 
 visc 		5.0E19
 visc_MAX	1.0E25

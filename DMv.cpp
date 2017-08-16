@@ -70,6 +70,7 @@ extern double dx_const;
 extern double dy_const;
 extern double dz_const;
 
+extern int pressure_0_true;
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
@@ -288,6 +289,10 @@ PetscErrorCode solve_veloc_3d()
 	//if (rank==0) printf("k\n");
 	
 	ierr = KSPSetTolerances(V_ksp,1.0E-9,PETSC_DEFAULT,PETSC_DEFAULT,PETSC_DEFAULT);CHKERRQ(ierr);
+	
+	if (pressure_0_true==1) {
+		ierr = KSPSetInitialGuessNonzero(V_ksp,PETSC_TRUE);
+	}
 	
 	char nome[100];
 	
