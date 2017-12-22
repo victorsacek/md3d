@@ -94,6 +94,9 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	stencil_width = 1;
 	ierr          = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,
 								 mx+1,my+1,mz+1,Px,Py,Pz,dof,stencil_width,NULL,NULL,NULL,&da_Thermal);CHKERRQ(ierr);
+	ierr = DMSetFromOptions(da_Thermal);CHKERRQ(ierr);
+	ierr = DMSetUp(da_Thermal);CHKERRQ(ierr);
+	
 	ierr = DMDASetFieldName(da_Thermal,0,"T");CHKERRQ(ierr);
 
 	

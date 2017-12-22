@@ -535,6 +535,15 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					}
 					
 					
+					if (T_initial_cond==9){
+						temper_aux=(depth/H_lito)*(Delta_T*(P-1-k))/(P-1);
+						
+						if (temper_aux>Delta_T) temper_aux=Delta_T;
+						
+						temper_aux-=(float)rand()/RAND_MAX;
+					}
+					
+					
 					if (T_initial_cond==74){
 						t1_aux = 0.5*tan((P-1-k)*3./(P-1)-1.5)/tan(1.5)+0.5;
 						temper_aux=Delta_T*t1_aux + Delta_T*0.2*tan(i*3./(M-1)-1.5);

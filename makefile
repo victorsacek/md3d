@@ -1,4 +1,4 @@
-PETSC_DIR=/Users/victorsacek/Documents/petsc-3.7.5
+PETSC_DIR=~/Documents/petsc-3.7.5
 PETSC_ARCH=arch-darwin-c-debug
 
 INCFLAGS=-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include
@@ -10,7 +10,7 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
  
 all: ${OBJECTS} chkopts
-	-${CLINKER} -o MD3D_3.6 ${OBJECTS} ${PETSC_LIB}
+	-${CLINKER} -o MD3D_3.6_lito ${OBJECTS} ${PETSC_LIB}
 	
 %.o: %.cpp
 	mpicc -Wall -fdiagnostics-color -c $< -o $@ ${INCFLAGS}

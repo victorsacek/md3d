@@ -129,6 +129,10 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	stencil_width = 1;
 	ierr          = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,DMDA_STENCIL_BOX,
 								 mx+1,my+1,mz+1,Px,Py,Pz,dof,stencil_width,NULL,NULL,NULL,&da_Veloc);CHKERRQ(ierr);
+	ierr = DMSetFromOptions(da_Veloc);CHKERRQ(ierr);
+	ierr = DMSetUp(da_Veloc);CHKERRQ(ierr);
+
+	
 	ierr = DMDASetFieldName(da_Veloc,0,"V_x");CHKERRQ(ierr);
 	ierr = DMDASetFieldName(da_Veloc,1,"V_y");CHKERRQ(ierr);
 	ierr = DMDASetFieldName(da_Veloc,2,"V_z");CHKERRQ(ierr);
