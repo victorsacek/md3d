@@ -3,7 +3,7 @@ from mayavi import mlab
 
 
 
-for n in range(10,11,1):
+for n in range(0,10,1):
 
 
 	nome_vec = "Veloc_fut_"+str(n)+".txt"
@@ -13,9 +13,9 @@ for n in range(10,11,1):
 	u,v,w = np.transpose(tot.reshape(np.size(tot)/3,3))
 
 
-	Nx = 20
-	Ny = 20
-	Nz = 20
+	Nx = 10
+	Ny = 10
+	Nz = 10
 
 	x = []
 	y = []
@@ -52,4 +52,4 @@ for n in range(10,11,1):
 
 	mlab.savefig(nome)
 
-	#mlab.close()
+	mlab.close()

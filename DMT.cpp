@@ -85,9 +85,11 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	PetscLogDouble Tempo1p,Tempo2p;
 	
 	PetscTime(&Tempo1p);
+	
+		
 
 	
-	PetscFunctionBeginUser;
+	//PetscFunctionBeginUser;
 	
 	
 	dof           = 1;
@@ -99,7 +101,6 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	
 	ierr = DMDASetFieldName(da_Thermal,0,"T");CHKERRQ(ierr);
 
-	
 	
 	
 	

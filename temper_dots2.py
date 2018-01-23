@@ -1,6 +1,28 @@
 import numpy as np
 from mayavi import mlab
 
+for cont in range(80):
+
+
+	mlab.figure(size=(1000,600))
+
+	x,y,z,c1,c2 = np.loadtxt("step_"+str(cont)+"-rank0.txt",unpack=True)
+
+	mlab.points3d(x[c1<1],y[c1<1],z[c1<1],scale_factor=2500.,color=(0,0.5,0))
+	mlab.points3d(x[c1>=1],y[c1>=1],z[c1>=1],scale_factor=2500.,color=(1,0,0))
+
+	x1,y1,z1,c11,c21 = np.loadtxt("step_"+str(cont)+"-rank1.txt",unpack=True)
+
+	mlab.points3d(x1[c11<1],y1[c11<1],z1[c11<1],scale_factor=2500.,color=(0,0.5,0))
+	mlab.points3d(x1[c11>=1],y1[c11>=1],z1[c11>=1],scale_factor=2500.,color=(1,0,0))
+
+	mlab.savefig("Fig2_"+str(cont)+".png")
+
+	mlab.close()
+
+
+
+"""
 Nx = 10
 Ny = 10
 Nz = 10
@@ -28,7 +50,7 @@ xx = np.reshape(x,(Nx,Ny,Nz),order='F')
 yy = np.reshape(y,(Nx,Ny,Nz),order='F')
 zz = np.reshape(z,(Nx,Ny,Nz),order='F')
 
-for n in range(0,10,1):
+for n in range(0,1,1):
 
 
 	nome_vec = "Temper_"+str(n)+".txt"
@@ -47,3 +69,4 @@ for n in range(0,10,1):
 	mlab.savefig(nome)
 
 	mlab.close()
+"""

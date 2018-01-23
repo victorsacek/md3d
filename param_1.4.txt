@@ -2,7 +2,7 @@
 100.0E3 100.0E3 100.0E3
 mg 1
 
-stepMAX 10
+stepMAX 80
 timeMAX 140.0E6
 
 dt_MAX	1.0e6

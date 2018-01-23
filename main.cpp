@@ -24,6 +24,10 @@ PetscErrorCode write_thermal_3d(int cont);
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz);
 
+PetscErrorCode createSwarm();
+PetscErrorCode moveSwarm(PetscReal dt);
+PetscErrorCode SwarmViewGP(DM dms,const char prefix[]);
+
 PetscErrorCode build_veloc_3d();
 
 PetscErrorCode solve_veloc_3d();
@@ -43,6 +47,7 @@ PetscErrorCode write_tempo(int cont);
 int main(int argc,char **args)
 {
 	PetscErrorCode ierr;
+	char prefix[PETSC_MAX_PATH_LEN];
 	PetscInt       Px,Py,Pz;
 	
 	ierr = PetscInitialize(&argc,&args,(char*)0,help);CHKERRQ(ierr);
@@ -84,7 +89,12 @@ int main(int argc,char **args)
 	ierr = create_thermal_3d(Nx-1,Ny-1,Nz-1,Px,Py,Pz);CHKERRQ(ierr);
 	
 	ierr = create_veloc_3d(Nx-1,Ny-1,Nz-1,Px,Py,Pz);CHKERRQ(ierr);
+
+	PetscPrintf(PETSC_COMM_WORLD,"Swarm INICIO\n");
 	
+	ierr = createSwarm();CHKERRQ(ierr);
+	
+	PetscPrintf(PETSC_COMM_WORLD,"Swarm FIM\n");
 	
 	int tcont=0;
 	
@@ -104,9 +114,13 @@ int main(int argc,char **args)
 	
 	//float aux_le;
 	
+	
+	
 	for (tempo = dt_calor,tcont=1;tempo<=timeMAX && tcont<=stepMAX;tempo+=dt_calor, tcont++){
 		
-		
+		for (PetscInt cont=0, max_cont=4;cont<max_cont; cont++){
+			ierr = moveSwarm(dt_calor_sec/max_cont);
+		}
 		
 		ierr = build_thermal_3d();CHKERRQ(ierr);
 
@@ -121,6 +135,8 @@ int main(int argc,char **args)
 			ierr = write_thermal_3d(tcont);
 			ierr = write_veloc_3d(tcont);
 			ierr = write_tempo(tcont);
+			PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step_%d",tcont);
+			ierr = SwarmViewGP(dms,prefix);CHKERRQ(ierr);
 		}
 		
 		//if (rank==0) scanf("%f",&aux_le);

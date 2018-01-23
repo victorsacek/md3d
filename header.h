@@ -200,3 +200,11 @@ Vec local_FP;
 Vec local_P;
 
 Vec local_dRho;
+
+///////
+
+DM dmcell;
+
+DM dms;
+
+PetscInt particles_per_ele=8;
