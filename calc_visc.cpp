@@ -7,13 +7,17 @@ extern int rheol;
 extern double visc_MAX;
 extern double visc_MIN;
 
+extern int geoq_on;
+
 extern double visco_r;
 
 extern double Delta_T;
 
 double calc_visco_ponto(double T,double z,double geoq_ponto){
 	
-	if (rheol==0)	return(visco_r);
+	double visco_real;
+	
+	if (rheol==0)	visco_real = visco_r;
 	
 	if (rheol==1){
 		double r=20.0;
@@ -31,23 +35,8 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		double Tb = Delta_T+273.0;
 		
 		double aux = E*(1.0/(T+273.0)-1.0/Tb)/R;
-		double visco_real = visco_r*exp(aux);
+		visco_real = visco_r*exp(aux);
 		
-		visco_real *= geoq_ponto;
-		
-		
-		
-		//double visco_top=fabs(z)*1.0E22/1.0E5;
-		
-		//if (visco_real>visco_top) visco_real=visco_top;
-		
-		//if (z>660.E3)
-		//	visco_real=visco_real*100;
-		
-		if (visco_real>visc_MAX) visco_real=visc_MAX;
-		if (visco_real<visc_MIN) visco_real=visc_MIN;
-		
-		return(visco_real);
 	}
 	
 	
@@ -59,23 +48,8 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		double Tb = 1300.0+273.0;
 		
 		double aux = E*(1.0/(T+273.0)-1.0/Tb)/R;
-		double visco_real = visco_r*exp(aux);
+		visco_real = visco_r*exp(aux);
 		
-		visco_real *= geoq_ponto;
-		
-		
-		
-		//double visco_top=fabs(z)*1.0E22/1.0E5;
-		
-		//if (visco_real>visco_top) visco_real=visco_top;
-		
-		//if (z>660.E3)
-		//	visco_real=visco_real*100;
-		
-		if (visco_real>visc_MAX) visco_real=visc_MAX;
-		if (visco_real<visc_MIN) visco_real=visc_MIN;
-		
-		return(visco_real);
 	}
 	
 	if (rheol==4){
@@ -86,14 +60,8 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		double Tb = Delta_T+273.0;
 		
 		double aux = E*(1.0/(T+273.0)-1.0/Tb)/R;
-		double visco_real = visco_r*exp(aux);
+		visco_real = visco_r*exp(aux);
 		
-		if (visco_real>visc_MAX) visco_real=visc_MAX;
-		if (visco_real<visc_MIN) visco_real=visc_MIN;
-		
-		visco_real *= geoq_ponto;
-		
-		return(visco_real);
 	}
 	
 	if (rheol==5){
@@ -106,14 +74,8 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		double Tb = Delta_T+273.0;
 		
 		double aux = -(T+273)*E/(R*Tb*Tb);
-		double visco_real = visco_r*b*exp(aux);
+		visco_real = visco_r*b*exp(aux);
 		
-		if (visco_real>visc_MAX) visco_real=visc_MAX;
-		if (visco_real<visc_MIN) visco_real=visc_MIN;
-		
-		visco_real *= geoq_ponto;
-		
-		return(visco_real);
 	}
 	
 	if (rheol==6){
@@ -126,14 +88,9 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		double Tb = Delta_T+273.0;
 		
 		double aux = -(T+273)*E/(R*Tb*Tb);
-		double visco_real = visco_r*b*exp(aux);
+		visco_real = visco_r*b*exp(aux);
 		
-		if (visco_real>visc_MAX) visco_real=visc_MAX;
-		if (visco_real<visc_MIN) visco_real=visc_MIN;
 		
-		//printf("%lg ",visco_real);
-		
-		return(visco_real);
 	}
 	
 	
@@ -142,6 +99,14 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 		exit(1);
 	}
 	
+	if (geoq_on)
+		visco_real *= geoq_ponto;
+	
+	
+	if (visco_real>visc_MAX) visco_real=visc_MAX;
+	if (visco_real<visc_MIN) visco_real=visc_MIN;
+	
+	return(visco_real);
 	
 	return(0);
 	

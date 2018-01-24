@@ -19,6 +19,9 @@ extern double dz_const;
 
 extern double Lx, Ly, depth;
 
+extern double H_lito;
+extern double escala_viscosidade;
+
 extern PetscInt particles_per_ele;
 
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
@@ -265,18 +268,25 @@ PetscErrorCode createSwarm()
 		
 		ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
+		
+		ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		for (p=0; p<nlocal; p++) {
 			//iarray[p] = (PetscInt)rank;
 			iarray[p] = p%particles_per_ele;
 		}
+		
 		ierr = DMSwarmRestoreField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
 		
 		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
-		for (p=0; p<nlocal; p++) {
-			rarray[p] = ((PetscReal)rank)*99. + 1.0;
-			
+		for (p=0; p<nlocal; p++){
+			if (array[p*3+2]>-H_lito){
+				rarray[p] = escala_viscosidade;
+			}
+			else rarray[p] = 1.0;
 		}
 		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
+		
+		ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		
 	}
 	

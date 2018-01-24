@@ -147,6 +147,8 @@ Vec local_FT;
 Vec local_Temper;
 Vec local_TC;
 
+int geoq_on;
+
 Vec geoq;
 Vec local_geoq;
 

@@ -20,6 +20,8 @@ extern double visco_r;
 extern double visc_MAX;
 extern double visc_MIN;
 
+extern int geoq_on;
+
 extern double escala_viscosidade;
 
 extern double veloc_superf;
@@ -70,7 +72,7 @@ PetscErrorCode reader(int rank){
 	if (rank==0){
 		FILE *f_parametros;
 		
-		f_parametros = fopen("param_1.4.txt","r");
+		f_parametros = fopen("param_1.5.txt","r");
 		
 		fscanf(f_parametros,"%ld %ld %ld",&Nx,&Ny,&Nz);
 		fscanf(f_parametros,"%lg %lg %lg",&Lx,&Ly,&depth);
@@ -111,6 +113,10 @@ PetscErrorCode reader(int rank){
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"visc_MIN") == 0) fscanf(f_parametros,"%lg",&visc_MIN);
 		else {printf("visc_MIN error\n"); exit(1);}
+		
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"geoq_on") == 0) fscanf(f_parametros,"%d",&geoq_on);
+		else {printf("geoq_on error\n"); exit(1);}
 		
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"geoq_fac") == 0) fscanf(f_parametros,"%lg",&escala_viscosidade);
@@ -264,6 +270,8 @@ PetscErrorCode reader(int rank){
 	MPI_Bcast(&visco_r,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	MPI_Bcast(&visc_MAX,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	MPI_Bcast(&visc_MIN,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
+
+	MPI_Bcast(&geoq_on,1,MPI_INT,0,PETSC_COMM_WORLD);
 	
 	MPI_Bcast(&escala_viscosidade,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	

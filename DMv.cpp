@@ -30,7 +30,7 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da, Vec FP);
 
 PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_const, double dz_const);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele);
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele);
 
 PetscErrorCode montaCeVeloc(PetscReal *Ce);
 
@@ -591,11 +591,11 @@ PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_c
 
 
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele){
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele){
 	
 	long i,j;
 	
-	double Visc_local,Temper_local;
+	double Visc_local,Temper_local,Geoq_local;
 	
 	
 	double kx,ky,kz;
@@ -630,6 +630,7 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 				else Hx=r5p9;
 				
 				Temper_local = 0.0;
+				Geoq_local = 0.0;
 				
 				prodH = Hx*Hy*Hz;
 				cont=0;
@@ -637,12 +638,13 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 					for (ey=-1.;ey<=1.;ey+=2.){
 						for (ex=-1.;ex<=1.;ex+=2.){
 							Temper_local+=Temper_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
+							Geoq_local+=geoq_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
 							cont++;
 						}
 					}
 				}
 				
-				Visc_local = calc_visco_ponto(Temper_local,0.0/*(z) mudar!!!!*/,1.0/*(geoq) mudar!!!*/);
+				Visc_local = calc_visco_ponto(Temper_local,0.0/*(z) mudar!!!!*/,Geoq_local);
 				
 				for (i=0;i<V_GT;i++){
 					for (j=0;j<V_GT;j++){

@@ -5,7 +5,7 @@
 
 PetscErrorCode DMDAGetElementCorners(DM da,PetscInt *sx,PetscInt *sy,PetscInt *sz,PetscInt *mx,PetscInt *my,PetscInt *mz);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele);
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele);
 
 
 
@@ -56,6 +56,9 @@ extern Vec local_FP;
 extern Vec local_P;
 
 extern Vec local_dRho;
+
+extern Vec geoq;
+extern Vec local_geoq;
 
 
 extern Vec Precon;
@@ -137,12 +140,23 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	ierr = DMDAVecGetArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	
-
+	
+	
+	PetscScalar             ***qq;
+	
+	ierr = VecZeroEntries(local_geoq);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(temper_da,geoq,INSERT_VALUES,local_geoq);
+	ierr = DMGlobalToLocalEnd(  temper_da,geoq,INSERT_VALUES,local_geoq);
+	
+	ierr = DMDAVecGetArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
+	
+	
 	
 	PetscReal volume = dx_const*dy_const*dz_const;
 	
 	
-	PetscReal temper_ele[T_NE];
+	PetscReal temper_ele[T_NE],geoq_ele[T_NE];
 	
 
 	for (ek = sez; ek < sez+mz; ek++) {
@@ -160,8 +174,9 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 				indr[7].i=ei+1; indr[7].j=ej+1; indr[7].k=ek+1;
 				
 				for (i=0;i<T_NE;i++) temper_ele[i]=tt[indr[i].k][indr[i].j][indr[i].i];
+				for (i=0;i<T_NE;i++) geoq_ele[i]=qq[indr[i].k][indr[i].j][indr[i].i];
 				
-				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele);
+				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele,geoq_ele);
 				
 				for (i=0;i<V_GT*V_GT;i++) Ke_veloc_final[i]=Ke_veloc[i]*volume;
 				
@@ -267,7 +282,7 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);
 	ierr = DMDAVecRestoreArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
-	
+	ierr = DMDAVecRestoreArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
 	
 	
 	

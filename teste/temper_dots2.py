@@ -1,7 +1,7 @@
 import numpy as np
 from mayavi import mlab
 
-with open("param_1.4.txt","r") as f:
+with open("param_1.5.txt","r") as f:
 	line = f.readline()
 	line = line.split()
 	Nx,Ny,Nz = int(line[0]),int(line[1]),int(line[2])
@@ -13,12 +13,12 @@ print(Nx,Ny,Nz,Lx,Ly,Lz)
 
 
 
-for cont in range(10):
+for cont in range(66):
 
 
 	mlab.figure(size=(1000,600))
 	
-	for rank in range(8):
+	for rank in range(2):
 
 		x,y,z,c1,c2 = np.loadtxt("step_"+str(cont)+"-rank"+str(rank)+".txt",unpack=True)
 
