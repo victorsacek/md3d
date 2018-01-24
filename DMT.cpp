@@ -43,6 +43,10 @@ extern long V_GN;
 extern Mat TA, TB;
 extern Vec Tf, Temper;
 
+extern Vec geoq,local_geoq;
+
+extern Vec geoq_cont,local_geoq_cont;
+
 extern Vec dRho;
 
 extern KSP T_ksp;
@@ -136,6 +140,9 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	ierr = DMCreateGlobalVector(da_Thermal,&Temper);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Thermal,&Tf);CHKERRQ(ierr);
 	
+	ierr = DMCreateGlobalVector(da_Thermal,&geoq);CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(da_Thermal,&geoq_cont);CHKERRQ(ierr);
+	
 	ierr = DMCreateGlobalVector(da_Thermal,&dRho);CHKERRQ(ierr);
 	
 	ierr = Thermal_init(Temper,da_Thermal);
@@ -145,8 +152,12 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	ierr = DMCreateLocalVector(da_Thermal,&local_FT);
 	ierr = DMCreateLocalVector(da_Thermal,&local_Temper);
 	ierr = DMCreateLocalVector(da_Thermal,&local_TC);
+
+	ierr = DMCreateLocalVector(da_Thermal,&local_geoq);
+	ierr = DMCreateLocalVector(da_Thermal,&local_geoq_cont);
 	
 	ierr = DMCreateLocalVector(da_Thermal,&local_dRho);
+	
 	
 	/*PetscViewer viewer;
 	
@@ -331,5 +342,29 @@ PetscErrorCode write_thermal_3d(int cont)
 	if (rank==0) printf("Thermal write: %lf\n",Tempo2-Tempo1);
 	
 	PetscFunctionReturn(0);	
+}
+
+PetscErrorCode write_geoq_3d(int cont)
+{
+	int rank;
+	
+	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+	PetscLogDouble Tempo1,Tempo2;
+	PetscTime(&Tempo1);
+	
+	PetscViewer viewer;
+	
+	char nome[100];
+	
+	sprintf(nome,"Geoq_%d.txt",cont);
+	
+	PetscViewerASCIIOpen(PETSC_COMM_WORLD,nome,&viewer);
+	VecView(geoq,viewer);
+	PetscViewerDestroy(&viewer);
+	
+	PetscTime(&Tempo2);
+	if (rank==0) printf("Geoq write: %lf\n",Tempo2-Tempo1);
+	
+	PetscFunctionReturn(0);
 }
 

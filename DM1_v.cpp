@@ -276,7 +276,6 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 
 PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
-	//Vec                    local_dRho;
 	PetscScalar             ***rr;
 	Stokes					***ff,***ffp;
 	
@@ -306,8 +305,7 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
 	/////
 	
-	
-	//ierr = DMGetLocalVector(drho_da,&local_dRho);CHKERRQ(ierr);
+
 	
 	ierr = VecZeroEntries(local_dRho);CHKERRQ(ierr);
 	

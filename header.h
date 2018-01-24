@@ -147,6 +147,11 @@ Vec local_FT;
 Vec local_Temper;
 Vec local_TC;
 
+Vec geoq;
+Vec local_geoq;
+
+Vec geoq_cont;
+Vec local_geoq_cont;
 
 /////////
 

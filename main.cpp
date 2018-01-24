@@ -22,11 +22,14 @@ PetscErrorCode destroy_thermal_3d();
 
 PetscErrorCode write_thermal_3d(int cont);
 
+PetscErrorCode write_geoq_3d(int cont);
+
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz);
 
 PetscErrorCode createSwarm();
 PetscErrorCode moveSwarm(PetscReal dt);
 PetscErrorCode SwarmViewGP(DM dms,const char prefix[]);
+PetscErrorCode Swarm2Mesh();
 
 PetscErrorCode build_veloc_3d();
 
@@ -94,6 +97,8 @@ int main(int argc,char **args)
 	
 	ierr = createSwarm();CHKERRQ(ierr);
 	
+	ierr = Swarm2Mesh();
+	
 	PetscPrintf(PETSC_COMM_WORLD,"Swarm FIM\n");
 	
 	int tcont=0;
@@ -105,6 +110,7 @@ int main(int argc,char **args)
 	
 	ierr = write_veloc_3d(tcont);
 	ierr = write_thermal_3d(tcont);
+	ierr = write_geoq_3d(tcont);
 	ierr = write_tempo(tcont);
 	
 	VecCopy(Veloc_fut,Veloc);
@@ -133,11 +139,14 @@ int main(int argc,char **args)
 		
 		if (tcont%print_step==0){
 			ierr = write_thermal_3d(tcont);
+			ierr = write_geoq_3d(tcont);
 			ierr = write_veloc_3d(tcont);
 			ierr = write_tempo(tcont);
 			PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step_%d",tcont);
 			ierr = SwarmViewGP(dms,prefix);CHKERRQ(ierr);
 		}
+		
+		ierr = Swarm2Mesh();
 		
 		//if (rank==0) scanf("%f",&aux_le);
 		

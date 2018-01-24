@@ -137,7 +137,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 {
 	PetscReal *array;
 	PetscInt *iarray;
-	PetscReal *cor;
+	PetscReal *geoq_fac;
 	PetscInt npoints,p,bs;
 	FILE *fp;
 	char name[PETSC_MAX_PATH_LEN];
@@ -152,12 +152,13 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	printf("npoints = %d\n",npoints);
 	ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
-	ierr = DMSwarmGetField(dms,"cor",NULL,NULL,(void**)&cor);CHKERRQ(ierr);
+	ierr = DMSwarmGetField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
 	for (p=0; p<npoints; p++) {
-		fprintf(fp,"%+1.4e %+1.4e %+1.4e %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],(double)iarray[p],(double)cor[p]);
+		if (iarray[p]==0)
+			fprintf(fp,"%+1.4e %+1.4e %+1.4e %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],(double)iarray[p],(double)geoq_fac[p]);
 	}
 	ierr = DMSwarmRestoreField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
-	ierr = DMSwarmRestoreField(dms,"cor",NULL,NULL,(void**)&cor);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	fclose(fp);
 	PetscFunctionReturn(0);
@@ -198,7 +199,7 @@ PetscErrorCode createSwarm()
 	
 	/* init fields */
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"itag",1,PETSC_INT);CHKERRQ(ierr);
-	ierr = DMSwarmRegisterPetscDatatypeField(dms,"cor",1,PETSC_REAL);CHKERRQ(ierr);
+	ierr = DMSwarmRegisterPetscDatatypeField(dms,"geoq_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmFinalizeFieldRegister(dms);CHKERRQ(ierr);
 	
 	{
@@ -265,15 +266,17 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
 		for (p=0; p<nlocal; p++) {
-			iarray[p] = (PetscInt)rank;
+			//iarray[p] = (PetscInt)rank;
+			iarray[p] = p%particles_per_ele;
 		}
 		ierr = DMSwarmRestoreField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
 		
-		ierr = DMSwarmGetField(dms,"cor",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
+		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		for (p=0; p<nlocal; p++) {
-			rarray[p] = ((PetscReal)rank)*0.1 + 0.5;
+			rarray[p] = ((PetscReal)rank)*99. + 1.0;
+			
 		}
-		ierr = DMSwarmRestoreField(dms,"cor",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
+		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		
 	}
 	
