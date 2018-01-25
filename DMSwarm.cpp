@@ -5,6 +5,7 @@
 #include <petscdmshell.h>
 #include <petscdmswarm.h>
 #include <petsc/private/dmimpl.h>
+#include <petscmath.h>
 //#include <petscsys.h>
 
 extern DM dmcell;
@@ -40,7 +41,7 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 	ierr = VecGetBlockSize(pos,&bs);CHKERRQ(ierr);
 	npoints = n/bs;
 	
-	printf("npoints: %d\n",npoints);
+	//printf("npoints: %d\n",npoints);
 	
 	PetscMalloc1(npoints,&cellidx);
 	
@@ -50,7 +51,7 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 	
 	
 	
-	printf("ola!!!\n\n");
+	//printf("ola!!!\n\n");
 	
 	dx = dx_const;
 	dy = dy_const;
@@ -103,7 +104,7 @@ PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltyp
 	
 	ierr = _DMLocatePoints_DMDARegular_IS(dm,pos,&iscell);CHKERRQ(ierr);
 	
-	PetscPrintf(PETSC_COMM_WORLD,"teste swarm\n");
+	//PetscPrintf(PETSC_COMM_WORLD,"teste swarm\n");
 	
 	ierr = VecGetLocalSize(pos,&npoints);CHKERRQ(ierr);
 	ierr = VecGetBlockSize(pos,&bs);CHKERRQ(ierr);
@@ -119,7 +120,7 @@ PetscErrorCode DMLocatePoints_DMDARegular(DM dm,Vec pos,DMPointLocationType ltyp
 		cells[p].index = boxCells[p];
 	}
 	ierr = ISRestoreIndices(iscell, &boxCells);CHKERRQ(ierr);
-	
+	ierr = ISDestroy(&iscell);CHKERRQ(ierr);
 	nfound = npoints;
 	ierr = PetscSFSetGraph(cellSF, npoints, nfound, NULL, PETSC_OWN_POINTER, cells, PETSC_OWN_POINTER);CHKERRQ(ierr);
 	
@@ -141,6 +142,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	PetscReal *array;
 	PetscInt *iarray;
 	PetscReal *geoq_fac;
+	PetscReal *rho_fac;
 	PetscInt npoints,p,bs;
 	FILE *fp;
 	char name[PETSC_MAX_PATH_LEN];
@@ -156,12 +158,14 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
+	ierr = DMSwarmGetField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	for (p=0; p<npoints; p++) {
 		if (iarray[p]==0)
-			fprintf(fp,"%+1.4e %+1.4e %+1.4e %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],(double)iarray[p],(double)geoq_fac[p]);
+			fprintf(fp,"%+1.4e %+1.4e %+1.4e %d %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],iarray[p],(double)geoq_fac[p],(double)rho_fac[p]);
 	}
 	ierr = DMSwarmRestoreField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	fclose(fp);
 	PetscFunctionReturn(0);
@@ -182,6 +186,7 @@ PetscErrorCode createSwarm()
 	PetscReal *array;
 	PetscInt *iarray;
 	PetscReal *rarray;
+	PetscReal *rarray_rho;
 	
 	PetscRandom rand;
 	
@@ -203,6 +208,7 @@ PetscErrorCode createSwarm()
 	/* init fields */
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"itag",1,PETSC_INT);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"geoq_fac",1,PETSC_REAL);CHKERRQ(ierr);
+	ierr = DMSwarmRegisterPetscDatatypeField(dms,"rho_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmFinalizeFieldRegister(dms);CHKERRQ(ierr);
 	
 	{
@@ -278,13 +284,21 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmRestoreField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
 		
 		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
+		ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		for (p=0; p<nlocal; p++){
 			if (array[p*3+2]>-H_lito){
 				rarray[p] = escala_viscosidade;
 			}
 			else rarray[p] = 1.0;
+			
+			if (array[p*3+2]<-0.8*depth + 0.02*depth*PetscCosReal(3.14159*array[p*3+0]/Lx)){
+				rarray_rho[p]=-1000.0;//-0.1;
+			}
+			else rarray_rho[p]=0.0;
+			
 		}
 		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
+		ierr = DMSwarmRestoreField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		
 		ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		

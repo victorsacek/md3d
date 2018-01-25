@@ -51,7 +51,7 @@ extern long V_NE, V_GN, V_GT;
 extern long GaussQuad;
 
 extern Mat VA, VB, VG;
-extern Vec Vf,Vf_P, Veloc, Veloc_fut;
+extern Vec Vf,Vf_P, Veloc, Veloc_fut, Veloc_weight;
 
 
 extern Vec rk_vec2;
@@ -168,6 +168,7 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateMatrix(da_Veloc,&VB);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&Veloc);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&Veloc_fut);CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(da_Veloc,&Veloc_weight);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&Vf);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&Vf_P);CHKERRQ(ierr);
 	
@@ -437,6 +438,7 @@ PetscErrorCode destroy_veloc_3d()
 	
 	PetscErrorCode ierr;
 	ierr = KSPDestroy(&V_ksp);CHKERRQ(ierr);
+	ierr = VecDestroy(&Veloc_weight);CHKERRQ(ierr);
 	ierr = VecDestroy(&Veloc_fut);CHKERRQ(ierr);
 	ierr = VecDestroy(&Veloc);CHKERRQ(ierr);
 	ierr = VecDestroy(&Vf);CHKERRQ(ierr);

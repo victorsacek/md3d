@@ -152,6 +152,9 @@ int geoq_on;
 Vec geoq;
 Vec local_geoq;
 
+Vec geoq_rho;
+Vec local_geoq_rho;
+
 Vec geoq_cont;
 Vec local_geoq_cont;
 
@@ -160,7 +163,7 @@ Vec local_geoq_cont;
 PetscReal denok_min;
 
 Mat VA, VB, VG;
-Vec Vf, Veloc, Veloc_fut;
+Vec Vf, Veloc, Veloc_fut,Veloc_weight;
 
 Vec Vf_P;
 
@@ -214,4 +217,4 @@ DM dmcell;
 
 DM dms;
 
-PetscInt particles_per_ele=8;
+PetscInt particles_per_ele=27;

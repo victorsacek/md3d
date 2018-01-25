@@ -22,7 +22,7 @@ extern double dz_const;
 
 extern double Lx, Ly, depth;
 
-extern Vec local_V,Veloc_fut;
+extern Vec local_V,Veloc_weight;
 
 PetscErrorCode moveSwarm(PetscReal dt)
 {
@@ -31,8 +31,8 @@ PetscErrorCode moveSwarm(PetscReal dt)
 	Stokes					***VV;
 	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
 	
-	ierr = DMGlobalToLocalBegin(da_Veloc,Veloc_fut,INSERT_VALUES,local_V);
-	ierr = DMGlobalToLocalEnd(  da_Veloc,Veloc_fut,INSERT_VALUES,local_V);
+	ierr = DMGlobalToLocalBegin(da_Veloc,Veloc_weight,INSERT_VALUES,local_V);
+	ierr = DMGlobalToLocalEnd(  da_Veloc,Veloc_weight,INSERT_VALUES,local_V);
 	
 	ierr = DMDAVecGetArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
 	
@@ -133,6 +133,7 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		array[3*p+2] += dt * vz;
 		
 	}
+	 
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	
 	ierr = DMSwarmMigrate(dms,PETSC_TRUE);CHKERRQ(ierr);

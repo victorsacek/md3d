@@ -13,20 +13,24 @@ print(Nx,Ny,Nz,Lx,Ly,Lz)
 
 
 
-for cont in range(66):
+for cont in range(500,1200+1,10):
 
 
 	mlab.figure(size=(1000,600))
 	
 	for rank in range(2):
 
-		x,y,z,c1,c2 = np.loadtxt("step_"+str(cont)+"-rank"+str(rank)+".txt",unpack=True)
+		x,y,z,c0,c1,c2 = np.loadtxt("step_"+str(cont)+"-rank"+str(rank)+".txt",unpack=True)
 
-		cor = (1-(rank%5)/5.,(rank%6)/6.,1-(rank%7)/7.)
-		print(cor)
+		cor = (1, 0, 0)
+		cor2 = (0,0.7,0)
+		#print(cor)
+		
+		cc = np.copy(c2)
+		difere = -0.05
 
-		mlab.points3d(x[c1<1],y[c1<1],z[c1<1],scale_factor=2500.,color=cor)
-		mlab.points3d(x[c1>=1],y[c1>=1],z[c1>=1],scale_factor=2500.,color=cor)
+		mlab.points3d(x[cc<=difere],y[cc<=difere],z[cc<=difere],scale_factor=2500.,color=cor)
+		mlab.points3d(x[cc>difere],y[cc>difere],z[cc>difere],scale_factor=2500.,color=cor2)
 	
 	
 	

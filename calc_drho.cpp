@@ -2,6 +2,7 @@
 
 extern Vec dRho;
 extern Vec Temper;
+extern Vec geoq_rho;
 
 extern double alpha_exp_thermo;
 extern double gravity;
@@ -17,7 +18,8 @@ PetscErrorCode calc_drho()
 	
 	a=alpha_exp_thermo*gravity*RHOM; CHKERRQ(ierr);
 	
-	VecScale(dRho,a); CHKERRQ(ierr);
+	//VecScale(dRho,a); CHKERRQ(ierr);
+	VecAXPBY(dRho,-gravity,a,geoq_rho); CHKERRQ(ierr);
 	
 	return ierr;
 	

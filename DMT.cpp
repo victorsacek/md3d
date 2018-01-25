@@ -44,6 +44,7 @@ extern Mat TA, TB;
 extern Vec Tf, Temper;
 
 extern Vec geoq,local_geoq;
+extern Vec geoq_rho,local_geoq_rho;
 
 extern Vec geoq_cont,local_geoq_cont;
 
@@ -141,6 +142,7 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	ierr = DMCreateGlobalVector(da_Thermal,&Tf);CHKERRQ(ierr);
 	
 	ierr = DMCreateGlobalVector(da_Thermal,&geoq);CHKERRQ(ierr);
+	ierr = DMCreateGlobalVector(da_Thermal,&geoq_rho);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Thermal,&geoq_cont);CHKERRQ(ierr);
 	
 	ierr = DMCreateGlobalVector(da_Thermal,&dRho);CHKERRQ(ierr);
@@ -154,6 +156,7 @@ PetscErrorCode create_thermal_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px
 	ierr = DMCreateLocalVector(da_Thermal,&local_TC);
 
 	ierr = DMCreateLocalVector(da_Thermal,&local_geoq);
+	ierr = DMCreateLocalVector(da_Thermal,&local_geoq_rho);
 	ierr = DMCreateLocalVector(da_Thermal,&local_geoq_cont);
 	
 	ierr = DMCreateLocalVector(da_Thermal,&local_dRho);

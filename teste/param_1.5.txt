@@ -1,36 +1,36 @@
-15 15 15
-200.0E3 200.0E3 200.0E3
+49 2 49
+91420.0 1.0E3 100000.
 mg 1
 
-stepMAX 80
-timeMAX 140.0E6
+stepMAX 2000
+timeMAX 140000.0E6
 
-dt_MAX	1.0e6
+dt_MAX	100.0e6
 
-print_step 1
+print_step 10
 
 visc 		1.0E20
 visc_MAX	1.0E25
 visc_MIN	1.0E17
 
 geoq_on		1
-geoq_fac 	100.0
+geoq_fac 	1.0
 veloc 		0.0E-2
 
-deltaT 		1300.
+deltaT 		0.
 alpha_exp_thermo 3.28E-5
 kappa 		1.0E-6
-gravity		9.8
+gravity		10.0
 rhom		3300. 
 
 H_per_mass	0.0E-12
 c_heat_capacity 1250.
 
 bcv_top_normal	1
-bcv_top_slip	0
+bcv_top_slip	1
 
 bcv_bot_normal	1
-bcv_bot_slip	0
+bcv_bot_slip	1
 
 bcv_left_normal	1
 bcv_left_slip	0
@@ -48,7 +48,7 @@ bcT_left	0
 bcT_right	0
 
 rheol	0
-T_initial	1
+T_initial	0
 
 H_lito		80000.0
 

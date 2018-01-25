@@ -10,8 +10,9 @@ include ${PETSC_DIR}/lib/petsc/conf/variables
 include ${PETSC_DIR}/lib/petsc/conf/rules
  
 all: ${OBJECTS} chkopts
-	-${CLINKER} -o MD3D_4.2_swarm ${OBJECTS} ${PETSC_LIB}
-	cp MD3D_4.2_swarm teste/
+	-${CLINKER} -o MD3D_4.3_swarm ${OBJECTS} ${PETSC_LIB}
+	cp MD3D_4.3_swarm /Users/victorsacek/Documents/Projetos/MD3D/MD3D_4.3_swarm/teste
+
 %.o: %.cpp
 	mpicc -Wall -fdiagnostics-color -c $< -o $@ ${INCFLAGS}
 
