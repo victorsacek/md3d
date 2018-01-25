@@ -64,6 +64,12 @@ extern Vec local_geoq;
 extern Vec Precon;
 extern Vec local_Precon;
 
+
+extern double visc_aux_MAX;
+extern double visc_aux_MIN;
+
+
+
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	PetscErrorCode         ierr;
@@ -157,6 +163,9 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	
 	PetscReal temper_ele[T_NE],geoq_ele[T_NE];
+	
+	visc_aux_MAX = 1.0E5;
+	visc_aux_MIN = 1.0E50;
 	
 
 	for (ek = sez; ek < sez+mz; ek++) {
@@ -284,7 +293,7 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	ierr = DMDAVecRestoreArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	ierr = DMDAVecRestoreArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
 	
-	
+	printf("Visc_min = %lg, Visc_max = %lg\n",visc_aux_MIN,visc_aux_MAX);
 	
 	PetscFunctionReturn(0);
 }

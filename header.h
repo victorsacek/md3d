@@ -55,6 +55,10 @@ double visco_r;
 double visc_MAX;
 double visc_MIN;
 
+
+double visc_aux_MAX;
+double visc_aux_MIN;
+
 double escala_viscosidade;
 
 double veloc_superf;

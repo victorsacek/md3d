@@ -104,6 +104,9 @@ extern PetscReal denok_min;
 extern Vec Precon;
 extern Vec local_Precon;
 
+extern double visc_aux_MAX;
+extern double visc_aux_MIN;
+
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
 {
@@ -648,6 +651,9 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 				
 				Visc_local = calc_visco_ponto(Temper_local,0.0/*(z) mudar!!!!*/,Geoq_local);
 				
+				if (Visc_local<visc_aux_MIN) visc_aux_MIN=Visc_local;
+				if (Visc_local>visc_aux_MAX) visc_aux_MAX=Visc_local;
+				
 				for (i=0;i<V_GT;i++){
 					for (j=0;j<V_GT;j++){
 						Ke[i*V_GT+j]+=KeG[(i*V_GT+j)+point]*Visc_local;
@@ -658,6 +664,8 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 			}
 		}
 	}
+	
+	//printf("Visc_min = %lg; Visc_max = %lg\n",Visc_min,Visc_max);
 	
 	PetscFunctionReturn(0);
 

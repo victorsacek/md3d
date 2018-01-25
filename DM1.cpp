@@ -528,6 +528,8 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					}
 					if (T_initial_cond==3){
 						temper_aux = Temper3(xx,zz);
+						
+						temper_aux-=(float)rand()/RAND_MAX;
 					}
 					
 					if (T_initial_cond==8){

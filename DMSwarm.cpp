@@ -226,7 +226,7 @@ PetscErrorCode createSwarm()
 		/*VecView(coors,PETSC_VIEWER_STDOUT_WORLD);*/
 		ierr = VecGetArray(coors,&LA_coors);CHKERRQ(ierr);
 		
-		ierr = DMSwarmSetLocalSizes(dms,milocal*mjlocal*mklocal*(particles_per_ele+1),4);CHKERRQ(ierr);
+		ierr = DMSwarmSetLocalSizes(dms,milocal*mjlocal*mklocal*(particles_per_ele),4);CHKERRQ(ierr);
 		ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
 		
 		printf("%d: %d\n",rank,nlocal);
@@ -245,7 +245,7 @@ PetscErrorCode createSwarm()
 		ierr = PetscRandomCreate(PETSC_COMM_SELF,&rand);CHKERRQ(ierr);
 		ierr = PetscRandomSetType(rand,PETSCRAND48);CHKERRQ(ierr);
 		ierr = PetscRandomSetInterval(rand,-1.0,1.0);CHKERRQ(ierr);
-		for (p=0; p<nlocal; p++) {
+		for (p=0; p<nlocal/particles_per_ele; p++) {
 			PetscReal px,py,pz,rx,ry,rz;
 			
 			for (cont=0;cont<particles_per_ele;cont++){
@@ -293,7 +293,7 @@ PetscErrorCode createSwarm()
 			else rarray[p] = 1.0;
 			
 			if (array[p*3+2]<-0.8*depth + 0.02*depth*PetscCosReal(3.14159*array[p*3+0]/Lx)){
-				rarray_rho[p]=-1000.0;//-0.1;
+				rarray_rho[p]=0.0;//-0.1;
 			}
 			else rarray_rho[p]=0.0;
 			
