@@ -224,30 +224,3 @@ DM dms;
 PetscInt particles_per_ele=27;
 
 PetscInt cont_particles=0;
-
-///////
-
-/////
-
-Vec fh_DT;
-Mat Kh_DT;
-
-Vec h_DT;
-
-PetscReal *hKe;
-
-PetscInt *Indices_Kh_DT_I;
-PetscInt *Indices_Kh_DT_J;
-
-long n_quad_top;
-
-PetscInt *cond_h_DT;
-
-long nodes_top;
-
-PetscInt *Quad_mesh;
-
-PetscReal *Vfe_DT;
-PetscInt *Indices_Vfe_DT;
-
-KSP DT_ksp;

@@ -160,7 +160,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	ierr = DMSwarmGetField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	for (p=0; p<npoints; p++) {
-		if (iarray[p]==0)
+		//if (iarray[p]==0)
 			fprintf(fp,"%+1.4e %+1.4e %+1.4e %d %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],iarray[p],(double)geoq_fac[p],(double)rho_fac[p]);
 	}
 	ierr = DMSwarmRestoreField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
@@ -287,15 +287,36 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		for (p=0; p<nlocal; p++){
-			if (array[p*3+2]>-H_lito){
-				rarray[p] = escala_viscosidade;
+			/*if (array[p*3+2]>-depth*(1-0.5) && array[p*3+2]<=-depth*(1-0.6) &&
+				array[p*3+0]<=Lx*0.3){
+				rarray[p] = 1000.0;
+				rarray_rho[p] = 3300.0;
+				
 			}
-			else rarray[p] = 1.0;
+			else {
+				if (array[p*3+2]>-depth*0.1){
+					rarray[p] = 0.9;
+					rarray_rho[p] = 1.0;
+				}
+				else {
+					if (array[p*3+2]>-depth*0.2){
+						rarray[p] = escala_viscosidade;
+						if (array[p*3+2]>-depth*0.14)	rarray_rho[p] = 2700.0;
+						else							rarray_rho[p] = 3300.0;
+					}
+					else{
+						rarray[p] = 1.0;
+						rarray_rho[p] = 3300.0;
+					}
+				}
+			}*/
+			rarray[p] = escala_viscosidade;
+			rarray_rho[p] = 3300.0;
 			
-			if (array[p*3+2]<-0.8*depth + 0.02*depth*PetscCosReal(3.14159*array[p*3+0]/Lx)){
+			/*if (array[p*3+2]<-0.8*depth + 0.02*depth*PetscCosReal(3.14159*array[p*3+0]/Lx)){
 				rarray_rho[p]=0.0;//-0.1;
 			}
-			else rarray_rho[p]=0.0;
+			else rarray_rho[p]=0.0;*/
 			
 		}
 		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);

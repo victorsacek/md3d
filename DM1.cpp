@@ -8,6 +8,8 @@ PetscErrorCode montaKeThermal_simplif(double *Ke_local,double *Ke);
 extern PetscReal *TCe;
 extern PetscReal *TCe_fut;
 
+extern long Nx,Ny,Nz;
+
 extern long T_NE;
 extern PetscReal *Ttotal;
 extern PetscReal *Ttotal_b;
@@ -34,6 +36,8 @@ extern int T_initial_cond;
 extern double seg_per_ano;
 
 extern double kappa;
+
+extern long Nx,Ny,Nz;
 
 
 extern double beta_max;
@@ -549,6 +553,31 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					if (T_initial_cond==74){
 						t1_aux = 0.5*tan((P-1-k)*3./(P-1)-1.5)/tan(1.5)+0.5;
 						temper_aux=Delta_T*t1_aux + Delta_T*0.2*tan(i*3./(M-1)-1.5);
+					}
+					
+					if (T_initial_cond==141){
+						double z_aux = -depth*(1.0-k*1.0/(Nz-1));
+						double x_aux = Lx*(i*1.0/(Nx-1));
+						//if (array[p*3+2]>-depth*(1-0.52) && array[p*3+2]<=-depth*(1-0.55)
+						/*if ((i==0 || i==Nx-1) && (z_aux>=-depth*(1.0-0.5+0.1)) && (z_aux<-depth*(1-0.6-0.1))){
+							VV[k][j][i].u=300.0/seg_per_ano;
+						}*/
+						
+						if (z_aux>-depth*0.1) temper_aux=0;
+						else {
+							if (z_aux>-depth*0.2) temper_aux=Delta_T*(1.0-(z_aux+depth*0.2)/(depth*0.1));
+							else temper_aux=Delta_T;
+						}
+						
+						if (z_aux>-depth*(1-0.5) && z_aux<=-depth*(1-0.6) && x_aux<=Lx*0.15){
+							temper_aux=Delta_T*0.2;
+						}
+						
+						
+						
+						if (temper_aux>Delta_T) temper_aux=Delta_T;
+						
+						temper_aux-=(float)rand()/RAND_MAX;
 					}
 					
 					

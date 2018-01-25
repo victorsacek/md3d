@@ -10,6 +10,8 @@ extern Vec geoq,local_geoq;
 extern Vec geoq_rho,local_geoq_rho;
 extern Vec geoq_cont,local_geoq_cont;
 
+extern Vec Temper,local_Temper;
+
 extern long Nx,Ny,Nz;
 
 extern double dx_const;
@@ -22,7 +24,7 @@ extern double Lx, Ly, depth;
 PetscErrorCode Swarm2Mesh(){
 
 	PetscErrorCode ierr;
-	PetscScalar             ***qq,***qq_cont,***qq_rho;
+	PetscScalar             ***qq,***qq_cont,***qq_rho,***TT;
 	
 	ierr = VecSet(geoq,0.0);CHKERRQ(ierr);
 	ierr = VecSet(geoq_rho,0.0);CHKERRQ(ierr);
@@ -37,6 +39,7 @@ PetscErrorCode Swarm2Mesh(){
 	ierr = DMGlobalToLocalBegin(da_Thermal,geoq_rho,INSERT_VALUES,local_geoq_rho);
 	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_rho,INSERT_VALUES,local_geoq_rho);
 	
+	
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq,&qq);CHKERRQ(ierr);
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq_rho,&qq_rho);CHKERRQ(ierr);
 	
@@ -45,6 +48,7 @@ PetscErrorCode Swarm2Mesh(){
 	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_cont,INSERT_VALUES,local_geoq_cont);
 	
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq_cont,&qq_cont);CHKERRQ(ierr);
+	
 	
 
 	PetscInt nlocal,bs,p;
@@ -157,6 +161,41 @@ PetscErrorCode Swarm2Mesh(){
 	VecPointwiseDivide(geoq,geoq,geoq_cont);
 	VecPointwiseDivide(geoq_rho,geoq_rho,geoq_cont);
 	//VecPointwiseMax(geoq,geoq,geoqOnes);
+	
+	
+	ierr = DMGlobalToLocalBegin(da_Thermal,Temper,INSERT_VALUES,local_Temper);
+	ierr = DMGlobalToLocalEnd(  da_Thermal,Temper,INSERT_VALUES,local_Temper);
+	
+	ierr = DMDAVecGetArray(da_Thermal,local_Temper,&TT);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(da_Thermal,geoq_rho,INSERT_VALUES,local_geoq_rho);
+	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_rho,INSERT_VALUES,local_geoq_rho);
+	
+	ierr = DMDAVecGetArray(da_Thermal,local_geoq_rho,&qq_rho);CHKERRQ(ierr);
+
+	
+	PetscInt       sx,sy,sz,mmx,mmy,mmz;
+	
+	ierr = DMDAGetCorners(da_Thermal,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+	
+	int k,j,i;
+	
+	for (k=sz; k<sz+mmz; k++) {
+		for (j=sy; j<sy+mmy; j++) {
+			for (i=sx; i<sx+mmx; i++) {
+				if (qq_rho[k][j][i]<100.0){
+					TT[k][j][i]=0.0;
+				}
+			}
+		}
+	}
+	
+	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq_rho,&qq_rho);CHKERRQ(ierr);
+	
+	ierr = DMDAVecRestoreArray(da_Thermal,local_Temper,&TT);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Thermal,local_Temper,INSERT_VALUES,Temper);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Thermal,local_Temper,INSERT_VALUES,Temper);CHKERRQ(ierr);
+	
 	
 	PetscFunctionReturn(0);
 	

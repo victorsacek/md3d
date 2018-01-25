@@ -68,6 +68,16 @@ extern Vec local_Precon;
 extern double visc_aux_MAX;
 extern double visc_aux_MIN;
 
+extern double seg_per_ano;
+
+extern Vec Veloc;
+extern Vec Veloc_fut;
+
+extern Vec local_V;
+
+extern long Nx,Ny,Nz;
+
+extern double depth;
 
 
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
@@ -301,7 +311,7 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
 	PetscScalar             ***rr;
-	Stokes					***ff,***ffp;
+	Stokes					***ff,***ffp,***VV;
 	
 	Stokes					***pp;
 	
@@ -317,6 +327,16 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
 	PetscFunctionBeginUser;
 	ierr = DMDAGetInfo(veloc_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
+	
+	
+	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(veloc_da,Veloc,INSERT_VALUES,local_V);
+	ierr = DMGlobalToLocalEnd(  veloc_da,Veloc,INSERT_VALUES,local_V);
+	
+	ierr = DMDAVecGetArray(veloc_da,local_V,&VV);CHKERRQ(ierr);
+	
+	
 	
 	/* get acces to the vector */
 
@@ -365,7 +385,7 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	
 	
 	
-	PetscInt i,j,c,n,g;
+	PetscInt i,j,k,c,n,g;
 	
 	MatStencil indr[T_NE],ind[V_GT];
 	
@@ -501,6 +521,28 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 		}
 	}
 	
+	
+	PetscInt       sx,sy,sz,mmx,mmy,mmz;
+	
+	ierr = DMDAGetCorners(veloc_da,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+	
+	for (k=sz; k<sz+mmz; k++) {
+		for (j=sy; j<sy+mmy; j++) {
+			for (i=sx; i<sx+mmx; i++) {
+				if (VVC[k][j][i].u==0){
+					ffp[k][j][i].u=VV[k][j][i].u;
+				}
+				if (VVC[k][j][i].v==0){
+					ffp[k][j][i].v=VV[k][j][i].v;
+				}
+				if (VVC[k][j][i].w==0){
+					ffp[k][j][i].w=VV[k][j][i].w;
+				}
+			}
+		}
+	}
+	
+	
 	ierr = DMDAVecRestoreArray(veloc_da,local_FV,&ff);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(veloc_da,local_FV,ADD_VALUES,F);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(veloc_da,local_FV,ADD_VALUES,F);CHKERRQ(ierr);
@@ -513,6 +555,8 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	ierr = DMDAVecRestoreArray(veloc_da,local_P,&pp);CHKERRQ(ierr);
 	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);CHKERRQ(ierr);
 	
+	ierr = DMDAVecRestoreArray(veloc_da,local_V,&VV);CHKERRQ(ierr);
+	
 	//printf("passou...\n");
 	
 	/*char nome[100];
@@ -524,4 +568,39 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da,Vec FP){
 	PetscViewerDestroy(&viewer);*/
 	
 	PetscFunctionReturn(0);
+}
+
+PetscErrorCode Init_Veloc(){
+	
+	
+	PetscErrorCode         ierr;
+	
+	Stokes					***VV;
+	
+	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
+	ierr = DMDAVecGetArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+	
+	PetscInt       sx,sy,sz,mmx,mmy,mmz;
+	PetscInt i,j,k;
+	
+	ierr = DMDAGetCorners(da_Veloc,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+	
+	for (k=sz; k<sz+mmz; k++) {
+		for (j=sy; j<sy+mmy; j++) {
+			for (i=sx; i<sx+mmx; i++) {
+				double z_aux = -depth*(1.0-k*1.0/(Nz-1));
+				//if (array[p*3+2]>-depth*(1-0.52) && array[p*3+2]<=-depth*(1-0.55)
+				if ((i==0 || i==Nx-1) && (z_aux>=-depth*(1.0-0.5+0.1)) && (z_aux<-depth*(1-0.6-0.1))){
+					VV[k][j][i].u=0.05/seg_per_ano;
+				}
+			}
+		}
+	}
+	
+	ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
+	
+	VecCopy(Veloc,Veloc_fut);
+	
 }

@@ -40,6 +40,8 @@ PetscErrorCode calc_drho();
 
 PetscErrorCode write_veloc_3d(int cont);
 
+PetscErrorCode Init_Veloc();
+
 double calc_visco_ponto(double T,double z,double geoq_ponto);
 
 extern double r06;
@@ -226,8 +228,10 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 				
 				if (i==0   && bcv_left_normal==1) ff[k][j][i].u = 0.0;
 				if (i==0   && bcv_left_slip==1) {
+					if (k<P*0.7){ //!!!!!!!
 						ff[k][j][i].v = 0.0;
 						ff[k][j][i].w = 0.0;
+					}
 				}
 				
 				if (i==M-1 && bcv_right_normal==1)ff[k][j][i].u = 0.0;
@@ -257,6 +261,18 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMDAVecRestoreArray(da_Veloc,local_FV,&ff);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
+	
+	if (rank==0) printf("Init_veloc\n");
+	Init_Veloc();
+	if (rank==0) printf("Init_veloc: fim\n");
+	
+	char nome[100];
+	PetscViewer viewer;
+	sprintf(nome,"Init_veloc.txt");
+	
+	PetscViewerASCIIOpen(PETSC_COMM_WORLD,nome,&viewer);
+	VecView(Veloc,viewer);
+	PetscViewerDestroy(&viewer);
 	
 	int ind;
 	PetscReal r;
@@ -365,6 +381,7 @@ PetscErrorCode solve_veloc_3d()
 	ierr = KSPSolve(V_ksp,Vf_P,Veloc_fut);CHKERRQ(ierr);
 	
 	//write_veloc_3d(101);
+	
 	
 	ierr = MatMultTranspose(VG,Veloc_fut,rk_vec2);CHKERRQ(ierr);
 	
