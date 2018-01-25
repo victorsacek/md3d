@@ -5,6 +5,9 @@
 
 PetscErrorCode montaKeThermal_simplif(double *Ke_local,double *Ke);
 
+extern double alpha_exp_thermo;
+extern double gravity;
+
 extern PetscReal *TCe;
 extern PetscReal *TCe_fut;
 
@@ -31,6 +34,8 @@ extern double Delta_T;
 
 extern double Lx, Ly, depth;
 
+extern double h_air;
+
 extern int T_initial_cond;
 
 extern double seg_per_ano;
@@ -48,6 +53,8 @@ extern double H_lito;
 
 extern Vec local_FT;
 extern Vec local_Temper;
+
+extern Vec geoq_H,local_geoq_H;
 
 extern Vec local_TC;
 
@@ -245,7 +252,7 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 								 DM veloc_da, Vec Veloc_total)
 {
 
-	PetscScalar              ***ff,***tt;
+	PetscScalar              ***ff,***tt,***HH;
 	PetscInt               M,N,P;
 	PetscErrorCode         ierr;
 	
@@ -300,9 +307,21 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	
 	ierr = DMDAVecGetArray(thermal_da,local_Temper,&tt);CHKERRQ(ierr);
 	
+	
+	
+	ierr = VecZeroEntries(local_geoq_H);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(thermal_da,geoq_H,INSERT_VALUES,local_geoq_H);
+	ierr = DMGlobalToLocalEnd(thermal_da,geoq_H,INSERT_VALUES,local_geoq_H);
+	
+	ierr = DMDAVecGetArray(thermal_da,local_geoq_H,&HH);CHKERRQ(ierr);
+	
+	
 	PetscInt i,j,k,c;
 	
 	MatStencil ind[8];
+	
+	PetscReal H_efetivo;
 	
 	
 	ierr = DMDAGetElementCorners(thermal_da,&sex,&sey,&sez,&mx,&my,&mz);CHKERRQ(ierr);
@@ -353,8 +372,27 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 				//	printf("%5.1lg ",tt[ind[c].i][ind[c].j][ind[c].k]);
 				//printf("\n");
 				
+				double T_mean=0;
+				for (j=0;j<T_NE;j++) T_mean+=tt[ind[j].k][ind[j].j][ind[j].i];
+				T_mean/=T_NE;
+				T_mean+=273.0; //essa temperatura tem que ser em Kelvin, por isso somamos 273!!!
+				
+				double Vz_mean=0;
+				for (j=0;j<T_NE;j++) Vz_mean+=VV[ind[j].k][ind[j].j][ind[j].i].w;
+				Vz_mean/=T_NE;
+				
+				double H_mean=0;
+				for (j=0;j<T_NE;j++) H_mean+=HH[ind[j].k][ind[j].j][ind[j].i];
+				H_mean/=T_NE;
+				
+				
+				
+				
+				
+				H_efetivo = -T_mean*alpha_exp_thermo*gravity*Vz_mean + H_mean;//incluir calor radiogenico variável!!!Já inclui!?
+				
 				for (c=0;c<T_NE;c++){
-					T_vec_aux_ele_final[c]=dt_calor_sec*TFe[c];
+					T_vec_aux_ele_final[c]=dt_calor_sec*TFe[c]*H_efetivo;
 					for (j=0;j<T_NE;j++){
 						T_vec_aux_ele_final[c]+=tt[ind[j].k][ind[j].j][ind[j].i]*Ttotal_b[c*T_NE+j];
 					}
@@ -411,6 +449,7 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 	ierr = DMDAVecRestoreArray(veloc_da,local_V,&VV);CHKERRQ(ierr);
 	ierr = DMDAVecRestoreArray(thermal_da,local_TC,&TTC);CHKERRQ(ierr);
 	ierr = DMDAVecRestoreArray(thermal_da,local_Temper,&tt);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(thermal_da,local_geoq_H,&HH);CHKERRQ(ierr);
 	
 
 	PetscFunctionReturn(0);
@@ -511,6 +550,8 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					xx = i*Lx/(M-1);
 					yy = j*Ly/(N-1);
 					zz = -(P-1-k)*depth/(P-1);
+					
+					zz += h_air;
 					
 					if (T_initial_cond==0){
 						temper_aux=(Delta_T*(P-1-k))/(P-1) + 100*cos(i*3.14159/(M-1));
@@ -663,9 +704,13 @@ double Thermal_profile(double t, double zz){
 	
 	double T = z/a_q;
 	
-	for (long n=1;n<100;n++){
-		T+=(2.0/PI)*sin(n*PI*z/a_q)*exp(-n*n*PI*PI*kappa*t/(a_q*a_q))/n;
+	if (z>0){
+		for (long n=1;n<100;n++){
+			T+=(2.0/PI)*sin(n*PI*z/a_q)*exp(-n*n*PI*PI*kappa*t/(a_q*a_q))/n;
+		}
 	}
+	else T=0.0;
+	
 	
 	T*=T_q;
 	

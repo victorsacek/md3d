@@ -74,6 +74,8 @@ double Delta_T;
 
 double H_lito;
 
+double h_air;
+
 double H_per_mass;
 double c_heat_capacity;
 
@@ -158,6 +160,9 @@ Vec local_geoq;
 
 Vec geoq_rho;
 Vec local_geoq_rho;
+
+Vec geoq_H;
+Vec local_geoq_H;
 
 Vec geoq_cont;
 Vec local_geoq_cont;

@@ -25,6 +25,10 @@ extern double escala_viscosidade;
 
 extern PetscInt particles_per_ele;
 
+extern double H_per_mass;
+
+extern double h_air;
+
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 {
 	
@@ -143,6 +147,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	PetscInt *iarray;
 	PetscReal *geoq_fac;
 	PetscReal *rho_fac;
+	PetscReal *H_fac;
 	PetscInt npoints,p,bs;
 	FILE *fp;
 	char name[PETSC_MAX_PATH_LEN];
@@ -158,13 +163,15 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
+	ierr = DMSwarmGetField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	for (p=0; p<npoints; p++) {
 		//if (iarray[p]==0)
-			fprintf(fp,"%+1.4e %+1.4e %+1.4e %d %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],iarray[p],(double)geoq_fac[p],(double)rho_fac[p]);
+			fprintf(fp,"%+1.4e %+1.4e %+1.4e %d %1.4e %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],iarray[p],(double)geoq_fac[p],(double)rho_fac[p],(double)H_fac[p]);
 	}
 	ierr = DMSwarmRestoreField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	fclose(fp);
@@ -187,6 +194,7 @@ PetscErrorCode createSwarm()
 	PetscInt *iarray;
 	PetscReal *rarray;
 	PetscReal *rarray_rho;
+	PetscReal *rarray_H;
 	
 	PetscRandom rand;
 	
@@ -209,6 +217,7 @@ PetscErrorCode createSwarm()
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"itag",1,PETSC_INT);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"geoq_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"rho_fac",1,PETSC_REAL);CHKERRQ(ierr);
+	ierr = DMSwarmRegisterPetscDatatypeField(dms,"H_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"cont",1,PETSC_INT);CHKERRQ(ierr);
 	ierr = DMSwarmFinalizeFieldRegister(dms);CHKERRQ(ierr);
 	
@@ -286,6 +295,8 @@ PetscErrorCode createSwarm()
 		
 		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
+		ierr = DMSwarmGetField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
+		
 		for (p=0; p<nlocal; p++){
 			/*if (array[p*3+2]>-depth*(1-0.5) && array[p*3+2]<=-depth*(1-0.6) &&
 				array[p*3+0]<=Lx*0.3){
@@ -310,8 +321,33 @@ PetscErrorCode createSwarm()
 					}
 				}
 			}*/
-			rarray[p] = escala_viscosidade;
-			rarray_rho[p] = 3300.0;
+			if (array[p*3+2]>-depth*0.1){
+				rarray[p] = 0.9;
+				rarray_rho[p] = 1.0;
+				rarray_H[p] = 0.0;
+			}
+			else {
+				if (array[p*3+2]>-depth*0.2){
+					rarray[p] = escala_viscosidade;
+					if (array[p*3+2]>-depth*0.14){
+						rarray_rho[p] = 2700.0;
+						rarray_H[p] = H_per_mass*10;
+					}
+					else{
+						rarray_rho[p] = 3300.0;
+						rarray_H[p] = H_per_mass;
+					}
+				}
+				else{
+					rarray[p] = 1.0;
+					rarray_rho[p] = 3300.0;
+					rarray_H[p] = H_per_mass;
+				}
+			}
+			
+			//rarray[p] = escala_viscosidade;
+			//rarray_rho[p] = 3300.0;
+			//rarray_H[p] = H_per_mass;
 			
 			/*if (array[p*3+2]<-0.8*depth + 0.02*depth*PetscCosReal(3.14159*array[p*3+0]/Lx)){
 				rarray_rho[p]=0.0;//-0.1;
@@ -321,6 +357,7 @@ PetscErrorCode createSwarm()
 		}
 		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
+		ierr = DMSwarmRestoreField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
 		
 		ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		

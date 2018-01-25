@@ -252,7 +252,7 @@ PetscErrorCode montaKeThermal_general(PetscReal *Ke, PetscReal *Me, PetscReal *F
 					NT_y[i+point*V_NE] = N_y[i];
 					NT_z[i+point*V_NE] = N_z[i];
 					
-					if (c_heat_capacity>0.0) Fe[i] += H_per_mass*prodH*volume*N[i]/c_heat_capacity;
+					if (c_heat_capacity>0.0) Fe[i] += prodH*volume*N[i]/c_heat_capacity;///H_per_mass removido daqui!!!!
 					
 					for (j=0;j<V_NE;j++){
 						Me[i*V_NE+j]+=prodH*volume*N[i]*N[j];

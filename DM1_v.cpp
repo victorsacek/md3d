@@ -588,11 +588,11 @@ PetscErrorCode Init_Veloc(){
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
-				double z_aux = -depth*(1.0-k*1.0/(Nz-1));
+				//double z_aux = -depth*(1.0-k*1.0/(Nz-1));
 				//if (array[p*3+2]>-depth*(1-0.52) && array[p*3+2]<=-depth*(1-0.55)
-				if ((i==0 || i==Nx-1) && (z_aux>=-depth*(1.0-0.5+0.1)) && (z_aux<-depth*(1-0.6-0.1))){
+				/*if ((i==0 || i==Nx-1) && (z_aux>=-depth*(1.0-0.5+0.1)) && (z_aux<-depth*(1-0.6-0.1))){
 					VV[k][j][i].u=0.05/seg_per_ano;
-				}
+				}*/// condicao de contorno usada no caso da placa em subduccao (video do Assumpcao)
 			}
 		}
 	}
@@ -602,5 +602,7 @@ PetscErrorCode Init_Veloc(){
 	ierr = DMLocalToGlobalEnd(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
 	
 	VecCopy(Veloc,Veloc_fut);
+	
+	PetscFunctionReturn(0);
 	
 }

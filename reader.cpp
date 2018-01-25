@@ -67,6 +67,8 @@ extern int bcT_left;
 
 extern int bcT_right;
 
+extern double h_air;
+
 
 PetscErrorCode reader(int rank){
 	if (rank==0){
@@ -232,6 +234,10 @@ PetscErrorCode reader(int rank){
 		if (strcmp (str,"H_lito") == 0) fscanf(f_parametros,"%lf",&H_lito);
 		else {printf("H_lito error\n"); exit(1);}
 		
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"h_air") == 0) fscanf(f_parametros,"%lf",&h_air);
+		else {printf("h_air error\n"); exit(1);}
+		
 		
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"beta_max") == 0) fscanf(f_parametros,"%lf",&beta_max);
@@ -314,6 +320,8 @@ PetscErrorCode reader(int rank){
 	MPI_Bcast(&T_initial_cond,1,MPI_INT,0,PETSC_COMM_WORLD);
 	
 	MPI_Bcast(&H_lito,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
+	
+	MPI_Bcast(&h_air,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	
 	MPI_Bcast(&beta_max,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	
