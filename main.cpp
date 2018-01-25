@@ -28,6 +28,7 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 
 PetscErrorCode createSwarm();
 PetscErrorCode moveSwarm(PetscReal dt);
+PetscErrorCode Swarm_add_remove();
 PetscErrorCode SwarmViewGP(DM dms,const char prefix[]);
 PetscErrorCode Swarm2Mesh();
 
@@ -145,6 +146,7 @@ int main(int argc,char **args)
 				VecAXPBY(Veloc_weight, fac, (1.0-fac),Veloc_fut); //y = a*x + b*y
 				ierr = moveSwarm(dt_calor_sec/max_cont);
 			}
+			Swarm_add_remove();
 			ierr = Swarm2Mesh();
 			//exit(1);
 		}

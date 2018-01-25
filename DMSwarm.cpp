@@ -209,6 +209,7 @@ PetscErrorCode createSwarm()
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"itag",1,PETSC_INT);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"geoq_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"rho_fac",1,PETSC_REAL);CHKERRQ(ierr);
+	ierr = DMSwarmRegisterPetscDatatypeField(dms,"cont",1,PETSC_INT);CHKERRQ(ierr);
 	ierr = DMSwarmFinalizeFieldRegister(dms);CHKERRQ(ierr);
 	
 	{

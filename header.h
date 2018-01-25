@@ -218,3 +218,5 @@ DM dmcell;
 DM dms;
 
 PetscInt particles_per_ele=27;
+
+PetscInt cont_particles=0;
