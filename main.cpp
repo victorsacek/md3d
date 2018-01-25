@@ -47,6 +47,9 @@ PetscErrorCode Calc_dt_calor();
 PetscErrorCode write_tempo(int cont);
 
 
+PetscErrorCode DT_aloc();
+
+
 
 
 
@@ -58,8 +61,9 @@ int main(int argc,char **args)
 	
 	ierr = PetscInitialize(&argc,&args,(char*)0,help);CHKERRQ(ierr);
 	
-	int rank;
+	int rank,nproc;
 	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
+	MPI_Comm_size(PETSC_COMM_WORLD,&nprox);
 	
 	
 	reader(rank);
@@ -105,6 +109,28 @@ int main(int argc,char **args)
 	
 	int tcont=0;
 	
+	
+	/////////////
+	
+	if (nproc>1){
+		if (rank==0){
+			
+		}
+		else {
+			
+		}
+	}
+	
+	///////////
+	
+	if (rank==0){
+		printf("DT_aloc: INICIO\n");
+		ierr = DT_aloc();CHKERRQ(ierr);
+		printf("DT_aloc: FIM\n");
+		
+		
+	}
+	MPI_Barrier(PETSC_COMM_WORLD);
 	
 	ierr = build_veloc_3d();CHKERRQ(ierr);
 	
