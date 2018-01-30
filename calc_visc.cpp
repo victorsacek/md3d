@@ -1,6 +1,6 @@
 #include <petscksp.h>
 //#include <stdio.h>
-#include <math.h>
+#include <petscmath.h>
 
 extern int rheol;
 
@@ -13,7 +13,9 @@ extern double visco_r;
 
 extern double Delta_T;
 
-double calc_visco_ponto(double T,double z,double geoq_ponto){
+
+
+double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
 	
 	double visco_real;
 	
@@ -101,6 +103,14 @@ double calc_visco_ponto(double T,double z,double geoq_ponto){
 	
 	if (geoq_on)
 		visco_real *= geoq_ponto;
+	
+	
+	///!!!!
+	visco_real = visco_r;
+	if (2*visco_real*e2_inva-1.0>0){
+		visco_real = 1.0/(2*(e2_inva));
+	}
+	//if (e2_inva>0)	visco_real = 1.0/(2*(e2_inva));//!!!! rigid plastic
 	
 	
 	if (visco_real>visc_MAX) visco_real=visc_MAX;

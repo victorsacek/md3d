@@ -55,8 +55,6 @@ PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 	
 	
 	
-	//printf("ola!!!\n\n");
-	
 	dx = dx_const;
 	dy = dy_const;
 	dz = dz_const;
@@ -148,6 +146,7 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	PetscReal *geoq_fac;
 	PetscReal *rho_fac;
 	PetscReal *H_fac;
+	PetscReal *strain_fac;
 	PetscInt npoints,p,bs;
 	FILE *fp;
 	char name[PETSC_MAX_PATH_LEN];
@@ -165,14 +164,18 @@ PetscErrorCode SwarmViewGP(DM dms,const char prefix[])
 	ierr = DMSwarmGetField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
+	ierr = DMSwarmGetField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	for (p=0; p<npoints; p++) {
 		//if (iarray[p]==0)
-			fprintf(fp,"%+1.4e %+1.4e %+1.4e %d %1.4e %1.4e %1.4e\n",array[3*p],array[3*p+1],array[3*p+2],iarray[p],(double)geoq_fac[p],(double)rho_fac[p],(double)H_fac[p]);
+			fprintf(fp,"%+1.4e %+1.4e %+1.4e %d %1.4e %1.4e %1.4e %1.4e\n",
+					array[3*p],array[3*p+1],array[3*p+2],iarray[p],(double)geoq_fac[p],
+					(double)rho_fac[p],(double)H_fac[p],(double)strain_fac[p]);
 	}
 	ierr = DMSwarmRestoreField(dms,"itag",NULL,NULL,(void**)&iarray);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	fclose(fp);
 	PetscFunctionReturn(0);
@@ -218,6 +221,7 @@ PetscErrorCode createSwarm()
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"geoq_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"rho_fac",1,PETSC_REAL);CHKERRQ(ierr);
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"H_fac",1,PETSC_REAL);CHKERRQ(ierr);
+	ierr = DMSwarmRegisterPetscDatatypeField(dms,"strain_fac",1,PETSC_REAL);CHKERRQ(ierr);	
 	ierr = DMSwarmRegisterPetscDatatypeField(dms,"cont",1,PETSC_INT);CHKERRQ(ierr);
 	ierr = DMSwarmFinalizeFieldRegister(dms);CHKERRQ(ierr);
 	
@@ -321,7 +325,11 @@ PetscErrorCode createSwarm()
 					}
 				}
 			}*/
-			if (array[p*3+2]>-depth*0.1){
+			rarray[p] = 1.0;
+			rarray_rho[p] = 2700.0;
+			rarray_H[p] = 0.0;
+			
+			/*if (array[p*3+2]>-depth*0.1){
 				rarray[p] = 0.9;
 				rarray_rho[p] = 1.0;
 				rarray_H[p] = 0.0;
@@ -343,7 +351,7 @@ PetscErrorCode createSwarm()
 					rarray_rho[p] = 3300.0;
 					rarray_H[p] = H_per_mass;
 				}
-			}
+			}*/
 			
 			//rarray[p] = escala_viscosidade;
 			//rarray_rho[p] = 3300.0;

@@ -59,6 +59,9 @@ double visc_MIN;
 double visc_aux_MAX;
 double visc_aux_MIN;
 
+double e2_aux_MAX;
+double e2_aux_MIN;
+
 double escala_viscosidade;
 
 double veloc_superf;
@@ -167,12 +170,24 @@ Vec local_geoq_H;
 Vec geoq_cont;
 Vec local_geoq_cont;
 
+Vec geoq_strain;
+Vec local_geoq_strain;
+
+
+/////////
+
+PetscReal *N_x_Gauss;
+PetscReal *N_y_Gauss;
+PetscReal *N_z_Gauss;
+
 /////////
 
 PetscReal denok_min;
 
 Mat VA, VB, VG;
-Vec Vf, Veloc, Veloc_fut,Veloc_weight;
+Vec Vf, Veloc, Veloc_fut,Veloc_weight,Veloc_0;
+
+Vec Veloc_step1, Veloc_step2;
 
 Vec Vf_P;
 

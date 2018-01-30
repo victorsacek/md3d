@@ -32,19 +32,19 @@ PetscErrorCode Swarm_add_remove();
 PetscErrorCode SwarmViewGP(DM dms,const char prefix[]);
 PetscErrorCode Swarm2Mesh();
 
-PetscErrorCode build_veloc_3d();
-
-PetscErrorCode solve_veloc_3d();
 
 PetscErrorCode reader(int rank);
 
 PetscErrorCode write_veloc_3d(int cont);
+PetscErrorCode write_veloc_cond(int cont);
 
 PetscErrorCode destroy_veloc_3d();
 
 PetscErrorCode Calc_dt_calor();
 
 PetscErrorCode write_tempo(int cont);
+
+PetscErrorCode veloc_total();
 
 
 
@@ -106,17 +106,20 @@ int main(int argc,char **args)
 	int tcont=0;
 	
 	
-	ierr = build_veloc_3d();CHKERRQ(ierr);
+	ierr = veloc_total(); CHKERRQ(ierr);
 	
-	ierr = solve_veloc_3d();CHKERRQ(ierr);
+	
+	PetscPrintf(PETSC_COMM_WORLD,"passou veloc_total\n");
 	
 	ierr = write_veloc_3d(tcont);
+	ierr = write_veloc_cond(tcont);
 	ierr = write_thermal_3d(tcont);
 	ierr = write_geoq_3d(tcont);
 	ierr = write_tempo(tcont);
 	
 	VecCopy(Veloc_fut,Veloc);
 	
+	PetscPrintf(PETSC_COMM_WORLD,"passou impressao\n");
 	
 	ierr = Calc_dt_calor();
 	
@@ -132,9 +135,7 @@ int main(int argc,char **args)
 
 		ierr = solve_thermal_3d();CHKERRQ(ierr);
 		
-		ierr = build_veloc_3d();CHKERRQ(ierr);
-		
-		ierr = solve_veloc_3d();CHKERRQ(ierr);
+		ierr = veloc_total(); CHKERRQ(ierr);
 		
 		if (geoq_on){
 			for (PetscInt cont=0, max_cont=10;cont<max_cont; cont++){

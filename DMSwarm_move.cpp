@@ -43,6 +43,8 @@ extern Vec geoq_cont,local_geoq_cont;
 extern PetscInt particles_per_ele;
 extern PetscInt cont_particles;
 
+extern long V_NE;
+
 
 
 PetscErrorCode moveSwarm(PetscReal dt)
@@ -67,10 +69,19 @@ PetscErrorCode moveSwarm(PetscReal dt)
 	
 	ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	
+	PetscReal N_x0[V_NE], N_y0[V_NE], N_z0[V_NE],strain[6],E2_invariant;
+	
+	
+	PetscReal *strain_fac;
+	ierr = DMSwarmGetField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
+	
 	for (p=0; p<nlocal; p++) {
 		PetscReal cx,cy,cz,vx,vy,vz;
 		PetscReal rx,ry,rz,rfac;
 		PetscInt i,j,k;
+		PetscInt ii,jj,kk;
+		
+		PetscReal kx,ky,kz,ex,ey,ez;
 		
 		cx = array[3*p];
 		cy = array[3*p+1];
@@ -143,6 +154,67 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		vz += VV[k+1][j+1][i+1].w * rfac;
 		
 		
+		/////////cumulative strain
+		
+		
+		kx = 2*rx-1;
+		ky = 2*ry-1;
+		kz = 2*rz-1;
+		
+		
+		PetscInt cont = 0;
+		for (ez=-1.;ez<=1.;ez+=2.){
+			for (ey=-1.;ey<=1.;ey+=2.){
+				for (ex=-1.;ex<=1.;ex+=2.){
+					//N[cont]=(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
+					N_x0[cont]=ex*(1+ey*ky)*(1+ez*kz)/4.0/dx_const;
+					N_y0[cont]=(1+ex*kx)*ey*(1+ez*kz)/4.0/dy_const;
+					N_z0[cont]=(1+ex*kx)*(1+ey*ky)*ez/4.0/dz_const;
+					cont++;
+				}
+			}
+		}
+		
+		cont=0;
+		
+		for (ii=0;ii<6;ii++) strain[ii]=0.0;
+		E2_invariant=0.0;
+		
+		for (kk=k;kk<=k+1;kk++){
+			for (jj=j;jj<=j+1;jj++){
+				for (ii=i;ii<=i+1;ii++){
+					strain[0] += N_x0[cont]*VV[kk][jj][ii].u;
+					strain[1] += N_y0[cont]*VV[kk][jj][ii].v;
+					strain[2] += N_z0[cont]*VV[kk][jj][ii].w;
+					
+					strain[3] += N_y0[cont]*VV[kk][jj][ii].u + N_x0[cont]*VV[kk][jj][ii].v;
+					strain[4] += N_z0[cont]*VV[kk][jj][ii].v + N_y0[cont]*VV[kk][jj][ii].w;
+					strain[5] += N_x0[cont]*VV[kk][jj][ii].w + N_z0[cont]*VV[kk][jj][ii].u;
+					
+					
+					cont++;
+				}
+			}
+		}
+		
+		
+		
+		
+		
+		E2_invariant = (strain[0]-strain[1])*(strain[0]-strain[1]);
+		E2_invariant+= (strain[1]-strain[2])*(strain[1]-strain[2]);
+		E2_invariant+= (strain[2]-strain[0])*(strain[2]-strain[0]);
+		E2_invariant/=6.0;
+		E2_invariant+= strain[3]*strain[3];
+		E2_invariant+= strain[4]*strain[4];
+		E2_invariant+= strain[5]*strain[5];
+		
+		
+		
+		
+		//strain_fac[p]+= dt*PetscSqrtReal(E2_invariant);//original!!!!
+		strain_fac[p]= PetscSqrtReal(E2_invariant);//!!!! não é o cumulativo! apenas o instantaneo.
+		
 		
 		//dt=0.01;
 		//vx = 0;
@@ -153,7 +225,12 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		array[3*p+1] += dt * vy;
 		array[3*p+2] += dt * vz;
 		
+		
+		
+		
 	}
+	
+	ierr = DMSwarmRestoreField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	 
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 	
@@ -198,6 +275,7 @@ PetscErrorCode Swarm_add_remove()
 	PetscReal *rarray;
 	PetscReal *rarray_rho;
 	PetscReal *rarray_H;
+	PetscReal *strain_fac;
 	
 	ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
 	
@@ -207,6 +285,7 @@ PetscErrorCode Swarm_add_remove()
 	ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
+	ierr = DMSwarmGetField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	
 	PetscInt Mx=0,mx=10000,My=0,my=10000,Mz=0,mz=10000;
 	PetscInt       sx,sy,sz,mmx,mmy,mmz;
@@ -269,6 +348,7 @@ PetscErrorCode Swarm_add_remove()
 	PetscReal p_add_r_rho[particles_per_ele*50];
 	PetscReal p_add_r_H[particles_per_ele*50];
 	PetscInt p_add_i[particles_per_ele*50];
+	PetscReal p_add_r_strain[particles_per_ele*50];
 	
 	
 	
@@ -397,7 +477,7 @@ PetscErrorCode Swarm_add_remove()
 					}
 					
 					
-					//printf("REMOVEU %d %d %d: %ld!!!\n",k,j,i,(long)qq_cont[k][j][i]);
+					//printf("REMOVEU %d %d %d: %ld!\n",k,j,i,(long)qq_cont[k][j][i]);
 				}
 				
 				if (qq_cont[k][j][i]<min_particles_per_ele){
@@ -455,9 +535,10 @@ PetscErrorCode Swarm_add_remove()
 					p_add_r[cont_p_add] = rarray[p_prox_total];
 					p_add_r_rho[cont_p_add] = rarray_rho[p_prox_total];
 					p_add_r_H[cont_p_add] = rarray_H[p_prox_total];
+					p_add_r_strain[cont_p_add] = strain_fac[p_prox_total];
 					
-					//printf("ADDED %d %d %d: !!!\n",k,j,i);
-					//printf("ADDED %lf %lf %lf: !!!\n",cx_v[chosen],cy_v[chosen],cz_v[chosen]);
+					//printf("ADDED %d %d %d: !\n",k,j,i);
+					//printf("ADDED %lf %lf %lf: !\n",cx_v[chosen],cy_v[chosen],cz_v[chosen]);
 					
 					
 					cont_p_add++;
@@ -484,7 +565,7 @@ PetscErrorCode Swarm_add_remove()
 	ierr = DMSwarmRestoreField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
-	
+	ierr = DMSwarmRestoreField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	
 	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq_cont,&qq_cont);CHKERRQ(ierr);
 	
@@ -515,6 +596,7 @@ PetscErrorCode Swarm_add_remove()
 		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
+		ierr = DMSwarmGetField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 		
 		for (pp=0; pp<cont_p_add; pp++){
 			array[(nlocal+pp)*3] = p_add_coor[pp*3];
@@ -527,6 +609,8 @@ PetscErrorCode Swarm_add_remove()
 			
 			rarray_H[nlocal+pp] = p_add_r_H[pp];
 			
+			strain_fac[nlocal+pp] = p_add_r_strain[pp];
+			
 			iarray[nlocal+pp] = p_add_i[pp];
 		}
 		
@@ -535,6 +619,7 @@ PetscErrorCode Swarm_add_remove()
 		ierr = DMSwarmRestoreField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"itag",&bs,NULL,(void**)&iarray);CHKERRQ(ierr);
+		ierr = DMSwarmRestoreField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 		
 	}
 	

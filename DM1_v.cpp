@@ -5,15 +5,19 @@
 
 PetscErrorCode DMDAGetElementCorners(DM da,PetscInt *sx,PetscInt *sy,PetscInt *sz,PetscInt *mx,PetscInt *my,PetscInt *mz);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele);
+PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
+									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele);
 
-
+PetscErrorCode write_veloc_3d(int cont);
+PetscErrorCode write_veloc_cond(int cont);
 
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
 	PetscScalar w;
 } Stokes;
+
+extern double Lx, Ly, depth;
 
 
 extern PetscReal *VCe;
@@ -60,6 +64,9 @@ extern Vec local_dRho;
 extern Vec geoq;
 extern Vec local_geoq;
 
+extern Vec geoq_strain;
+extern Vec local_geoq_strain;
+
 
 extern Vec Precon;
 extern Vec local_Precon;
@@ -68,10 +75,14 @@ extern Vec local_Precon;
 extern double visc_aux_MAX;
 extern double visc_aux_MIN;
 
+extern double e2_aux_MAX;
+extern double e2_aux_MIN;
+
 extern double seg_per_ano;
 
 extern Vec Veloc;
 extern Vec Veloc_fut;
+extern Vec Veloc_0;
 
 extern Vec local_V;
 
@@ -168,14 +179,36 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	ierr = DMDAVecGetArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
 	
 	
+	PetscScalar             ***qq_strain;
+	
+	ierr = VecZeroEntries(local_geoq_strain);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(temper_da,geoq_strain,INSERT_VALUES,local_geoq_strain);
+	ierr = DMGlobalToLocalEnd(  temper_da,geoq_strain,INSERT_VALUES,local_geoq_strain);
+	
+	ierr = DMDAVecGetArray(temper_da,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
+	
+	Stokes					***VV;
+	
+	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
+	
+	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_fut,INSERT_VALUES,local_V);
+	ierr = DMGlobalToLocalEnd(  veloc_da,Veloc_fut,INSERT_VALUES,local_V);
+	
+	ierr = DMDAVecGetArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+	
+	
 	
 	PetscReal volume = dx_const*dy_const*dz_const;
 	
 	
-	PetscReal temper_ele[T_NE],geoq_ele[T_NE];
+	PetscReal temper_ele[T_NE],geoq_ele[T_NE],e2_ele[T_NE],VX_ele[T_NE],VY_ele[T_NE],VZ_ele[T_NE];
 	
 	visc_aux_MAX = 1.0E5;
 	visc_aux_MIN = 1.0E50;
+	
+	e2_aux_MAX = 0.0;
+	e2_aux_MIN = 1.0E50;
 	
 
 	for (ek = sez; ek < sez+mz; ek++) {
@@ -194,8 +227,14 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 				
 				for (i=0;i<T_NE;i++) temper_ele[i]=tt[indr[i].k][indr[i].j][indr[i].i];
 				for (i=0;i<T_NE;i++) geoq_ele[i]=qq[indr[i].k][indr[i].j][indr[i].i];
+				for (i=0;i<T_NE;i++) e2_ele[i]=qq_strain[indr[i].k][indr[i].j][indr[i].i];
 				
-				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele,geoq_ele);
+				for (i=0;i<T_NE;i++) VX_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].u;
+				for (i=0;i<T_NE;i++) VY_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].v;
+				for (i=0;i<T_NE;i++) VZ_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].w;
+				
+				
+				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele,geoq_ele,e2_ele,VX_ele,VY_ele,VZ_ele);
 				
 				for (i=0;i<V_GT*V_GT;i++) Ke_veloc_final[i]=Ke_veloc[i]*volume;
 				
@@ -293,6 +332,8 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 		Verif_VG=1;
 	}
 	
+	ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+	
 	ierr = DMDAVecRestoreArray(veloc_da,local_Precon,&pc);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(veloc_da,local_Precon,ADD_VALUES,Precon);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(veloc_da,local_Precon,ADD_VALUES,Precon);CHKERRQ(ierr);
@@ -302,8 +343,11 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);
 	ierr = DMDAVecRestoreArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	ierr = DMDAVecRestoreArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
+	ierr = DMDAVecRestoreArray(temper_da,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
 	
 	printf("Visc_min = %lg, Visc_max = %lg\n",visc_aux_MIN,visc_aux_MAX);
+	
+	printf("e2_min = %lg, e2_max = %lg\n",e2_aux_MIN,e2_aux_MAX);
 	
 	PetscFunctionReturn(0);
 }
@@ -585,6 +629,10 @@ PetscErrorCode Init_Veloc(){
 	
 	ierr = DMDAGetCorners(da_Veloc,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
 	
+	PetscInt               M,N,P;
+	
+	ierr = DMDAGetInfo(da_Veloc,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
+	
 	for (k=sz; k<sz+mmz; k++) {
 		for (j=sy; j<sy+mmy; j++) {
 			for (i=sx; i<sx+mmx; i++) {
@@ -593,6 +641,11 @@ PetscErrorCode Init_Veloc(){
 				/*if ((i==0 || i==Nx-1) && (z_aux>=-depth*(1.0-0.5+0.1)) && (z_aux<-depth*(1-0.6-0.1))){
 					VV[k][j][i].u=0.05/seg_per_ano;
 				}*/// condicao de contorno usada no caso da placa em subduccao (video do Assumpcao)
+				
+				if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
+					//VV[k][j][i].w=-0.05/seg_per_ano;
+					VV[k][j][i].w=-1.0;
+				}
 			}
 		}
 	}
@@ -602,6 +655,10 @@ PetscErrorCode Init_Veloc(){
 	ierr = DMLocalToGlobalEnd(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
 	
 	VecCopy(Veloc,Veloc_fut);
+	VecCopy(Veloc,Veloc_0);
+	
+	write_veloc_3d(-1);
+	write_veloc_cond(-1);
 	
 	PetscFunctionReturn(0);
 	
