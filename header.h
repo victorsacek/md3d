@@ -246,6 +246,6 @@ PetscInt particles_per_ele=27;
 PetscInt cont_particles=0;
 
 // Flags
-int WITH_PLASTIC_RHEOLGY = 0; // Controla o uso da reologia plástica
+int WITH_PLASTIC_RHEOLOGY = 0; // Controla o uso da reologia plástica
 int WITH_ADIABATIC_H = 0;     // Controla a adição do calor adiabático
 int WITH_RADIOGENIC_H = 0;    // Controla a adição do calor radiogênico
