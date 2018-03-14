@@ -552,6 +552,9 @@ PetscErrorCode Swarm_add_remove()
 		}
 	}
 	
+	
+	ierr = PetscRandomDestroy(&rand);CHKERRQ(ierr);
+	
 	//printf("%d %d   %d %d   %d %d\n",mx,Mx,my,My,mz,Mz);
 	
 	//printf("b: %d %d   %d %d   %d %d\n",sx,sx+mmx-1,sy,sy+mmy-1,sz,sz+mmz-1);
