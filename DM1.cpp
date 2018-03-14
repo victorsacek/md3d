@@ -517,6 +517,9 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 			VecSetValue(FN,t,y[0], INSERT_VALUES);
 		}
 		
+		VecAssemblyBegin(FN);
+		VecAssemblyEnd(FN);
+		
 		DMDANaturalToGlobalBegin(thermal_da,FN,INSERT_VALUES,F);
 		DMDANaturalToGlobalEnd(thermal_da,FN,INSERT_VALUES,F);
 		
