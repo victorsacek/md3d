@@ -269,13 +269,13 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 				}
 				
 				
-				//punch!!!!
-				if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
-					ff[k][j][i].w = 0.0;
-					ff[k][j][i].u = 0.0;
-					ff[k][j][i].v = 0.0;
-				}
-				//punch!!!!
+				//
+				//if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
+				//	ff[k][j][i].w = 0.0;
+				//	ff[k][j][i].u = 0.0;
+				//	ff[k][j][i].v = 0.0;
+				//}
+				//condition specific for the punch removed
 			}
 		}
 	}

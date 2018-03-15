@@ -642,10 +642,10 @@ PetscErrorCode Init_Veloc(){
 					VV[k][j][i].u=0.05/seg_per_ano;
 				}*/// condicao de contorno usada no caso da placa em subduccao (video do Assumpcao)
 				
-				if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
+				/*if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
 					//VV[k][j][i].w=-0.05/seg_per_ano;
 					VV[k][j][i].w=-1.0;
-				}
+				}*/
 			}
 		}
 	}
