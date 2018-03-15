@@ -13,6 +13,8 @@ extern double visco_r;
 
 extern double Delta_T;
 
+extern PetscInt WITH_NON_LINEAR;
+
 
 
 double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
@@ -106,11 +108,13 @@ double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
 	
 	
 	///!!!!
-	visco_real = visco_r;
-	if (2*visco_real*e2_inva-1.0>0){
-		visco_real = 1.0/(2*(e2_inva));
+	if (WITH_NON_LINEAR==1){
+		visco_real = visco_r;
+		if (2*visco_real*e2_inva-1.0>0){
+			visco_real = 1.0/(2*(e2_inva));
+		}
+		//if (e2_inva>0)	visco_real = 1.0/(2*(e2_inva));//!!!! rigid plastic
 	}
-	//if (e2_inva>0)	visco_real = 1.0/(2*(e2_inva));//!!!! rigid plastic
 	
 	
 	if (visco_real>visc_MAX) visco_real=visc_MAX;

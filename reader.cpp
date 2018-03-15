@@ -69,12 +69,15 @@ extern int bcT_right;
 
 extern double h_air;
 
+extern PetscInt WITH_NON_LINEAR;
+extern PetscInt WITH_ADIABATIC_H;
+extern PetscInt WITH_RADIOGENIC_H;
 
 PetscErrorCode reader(int rank){
 	if (rank==0){
 		FILE *f_parametros;
 		
-		f_parametros = fopen("param_1.5.txt","r");
+		f_parametros = fopen("param_1.5.2.txt","r");
 		
 		fscanf(f_parametros,"%ld %ld %ld",&Nx,&Ny,&Nz);
 		fscanf(f_parametros,"%lg %lg %lg",&Lx,&Ly,&depth);
@@ -158,6 +161,19 @@ PetscErrorCode reader(int rank){
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"c_heat_capacity") == 0) fscanf(f_parametros,"%lg",&c_heat_capacity);
 		else {printf("c_heat_capacity error\n"); exit(1);}
+		
+		
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"non_linear") == 0) fscanf(f_parametros,"%d",&WITH_NON_LINEAR);
+		else {printf("non_linear error\n"); exit(1);}
+		
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"adiabatic_H") == 0) fscanf(f_parametros,"%d",&WITH_ADIABATIC_H);
+		else {printf("adiabatic_H error\n"); exit(1);}
+		
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"radiogenic_H") == 0) fscanf(f_parametros,"%d",&WITH_RADIOGENIC_H);
+		else {printf("radiogenic_H error\n"); exit(1);}
 		
 		
 		
@@ -296,6 +312,10 @@ PetscErrorCode reader(int rank){
 	MPI_Bcast(&H_per_mass,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	
 	MPI_Bcast(&c_heat_capacity,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
+
+	MPI_Bcast(&WITH_NON_LINEAR,1,MPI_INT,0,PETSC_COMM_WORLD);
+	MPI_Bcast(&WITH_ADIABATIC_H,1,MPI_INT,0,PETSC_COMM_WORLD);
+	MPI_Bcast(&WITH_RADIOGENIC_H,1,MPI_INT,0,PETSC_COMM_WORLD);
 	
 	MPI_Bcast(&bcv_top_normal,1,MPI_INT,0,PETSC_COMM_WORLD);
 	MPI_Bcast(&bcv_top_slip,1,MPI_INT,0,PETSC_COMM_WORLD);

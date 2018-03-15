@@ -244,3 +244,9 @@ DM dms;
 PetscInt particles_per_ele=27;
 
 PetscInt cont_particles=0;
+
+
+////// Flags
+PetscInt WITH_NON_LINEAR = 0; // Controla o uso da reologia plástica e/ou viscosidade não linear
+PetscInt WITH_ADIABATIC_H = 0;     // Controla a adição do calor adiabático
+PetscInt WITH_RADIOGENIC_H = 0;    // Controla a adição do calor radiogênico

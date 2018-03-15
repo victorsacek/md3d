@@ -68,6 +68,11 @@ PetscReal Temper3(double xx,double zz);
 PetscReal Temper4(double xx,double yy,double zz);
 
 
+extern PetscInt WITH_NON_LINEAR;
+extern PetscInt WITH_ADIABATIC_H;
+extern PetscInt WITH_RADIOGENIC_H;
+
+
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
@@ -372,25 +377,33 @@ PetscErrorCode AssembleF_Thermal(Vec F,DM thermal_da,PetscReal *TKe,PetscReal *T
 				//	printf("%5.1lg ",tt[ind[c].i][ind[c].j][ind[c].k]);
 				//printf("\n");
 				
-				double T_mean=0;
-				for (j=0;j<T_NE;j++) T_mean+=tt[ind[j].k][ind[j].j][ind[j].i];
-				T_mean/=T_NE;
-				T_mean+=273.0; //essa temperatura tem que ser em Kelvin, por isso somamos 273!!!ok
+				H_efetivo = 0.0;
 				
-				double Vz_mean=0;
-				for (j=0;j<T_NE;j++) Vz_mean+=VV[ind[j].k][ind[j].j][ind[j].i].w;
-				Vz_mean/=T_NE;
+				if (WITH_RADIOGENIC_H==1){
+					double H_mean=0;
+					for (j=0;j<T_NE;j++) H_mean+=HH[ind[j].k][ind[j].j][ind[j].i];
+					H_mean/=T_NE;/// Está aqui o calor radiogenico variável
 				
-				double H_mean=0;
-				for (j=0;j<T_NE;j++) H_mean+=HH[ind[j].k][ind[j].j][ind[j].i];
-				H_mean/=T_NE;/// Está aqui o calor radiogenico variável!!!ok
+					H_efetivo = H_mean;
+				}
+				
+				if (WITH_ADIABATIC_H==1){
+					double T_mean=0;
+					for (j=0;j<T_NE;j++) T_mean+=tt[ind[j].k][ind[j].j][ind[j].i];
+					T_mean/=T_NE;
+					T_mean+=273.0; //essa temperatura tem que ser em Kelvin, por isso somamos 273
+					
+					double Vz_mean=0;
+					for (j=0;j<T_NE;j++) Vz_mean+=VV[ind[j].k][ind[j].j][ind[j].i].w;
+					Vz_mean/=T_NE;
+					
+					H_efetivo += -T_mean*alpha_exp_thermo*gravity*Vz_mean;
+				}
 				
 				
 				
 				
 				
-				H_efetivo = -T_mean*alpha_exp_thermo*gravity*Vz_mean + H_mean;//Já com calor cadiogenico!!!ok
-				H_efetivo = 0.0; ///!!!! removi a curva adiabatica e produção de calor radiogenico
 				
 				for (c=0;c<T_NE;c++){
 					T_vec_aux_ele_final[c]=dt_calor_sec*TFe[c]*H_efetivo;
