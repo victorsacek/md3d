@@ -17,6 +17,14 @@ long V_GT = V_NE*V_GN;
 
 double Lx, Ly, depth;
 
+PetscScalar *interfaces;
+int n_interfaces;
+
+PetscScalar *inter_rho;
+PetscScalar *inter_geoq;
+PetscScalar *inter_H;
+
+
 /////////
 
 double seg_per_ano = 365.0*24.0*3600.0;

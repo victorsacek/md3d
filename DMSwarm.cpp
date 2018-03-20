@@ -14,6 +14,8 @@ extern DM dms;
 
 extern DM da_Veloc;
 
+extern long Nx,Ny;
+
 extern double dx_const;
 extern double dy_const;
 extern double dz_const;
@@ -28,6 +30,15 @@ extern PetscInt particles_per_ele;
 extern double H_per_mass;
 
 extern double h_air;
+
+extern double RHOM;
+
+extern int n_interfaces;
+extern PetscScalar *interfaces;
+
+extern PetscScalar *inter_rho;
+extern PetscScalar *inter_geoq;
+extern PetscScalar *inter_H;
 
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 {
@@ -301,68 +312,94 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
 		
-		for (p=0; p<nlocal; p++){
-			/*if (array[p*3+2]>-depth*(1-0.5) && array[p*3+2]<=-depth*(1-0.6) &&
-				array[p*3+0]<=Lx*0.3){
-				rarray[p] = 1000.0;
-				rarray_rho[p] = 3300.0;
+		if (n_interfaces==0){
+			for (p=0; p<nlocal; p++){
+				rarray[p] = escala_viscosidade;
+				rarray_rho[p] = RHOM;
+				rarray_H[p] = H_per_mass;
+				/*rarray[p] = 1.0;
+				rarray_rho[p] = 2700.0;
+				rarray_H[p] = 0.0;//!!!!*/
 				
 			}
-			else {
-				if (array[p*3+2]>-depth*0.1){
-					rarray[p] = 0.9;
-					rarray_rho[p] = 1.0;
-				}
-				else {
-					if (array[p*3+2]>-depth*0.2){
-						rarray[p] = escala_viscosidade;
-						if (array[p*3+2]>-depth*0.14)	rarray_rho[p] = 2700.0;
-						else							rarray_rho[p] = 3300.0;
-					}
-					else{
-						rarray[p] = 1.0;
-						rarray_rho[p] = 3300.0;
-					}
-				}
-			}*/
-			rarray[p] = 1.0;
-			rarray_rho[p] = 2700.0;
-			rarray_H[p] = 0.0;
-			
-			/*if (array[p*3+2]>-depth*0.1){
-				rarray[p] = 0.9;
-				rarray_rho[p] = 1.0;
-				rarray_H[p] = 0.0;
-			}
-			else {
-				if (array[p*3+2]>-depth*0.2){
-					rarray[p] = escala_viscosidade;
-					if (array[p*3+2]>-depth*0.14){
-						rarray_rho[p] = 2700.0;
-						rarray_H[p] = H_per_mass*10;
-					}
-					else{
-						rarray_rho[p] = 3300.0;
-						rarray_H[p] = H_per_mass;
-					}
-				}
-				else{
-					rarray[p] = 1.0;
-					rarray_rho[p] = 3300.0;
-					rarray_H[p] = H_per_mass;
-				}
-			}*/
-			
-			//rarray[p] = escala_viscosidade;
-			//rarray_rho[p] = 3300.0;
-			//rarray_H[p] = H_per_mass;
-			
-			/*if (array[p*3+2]<-0.8*depth + 0.02*depth*PetscCosReal(3.14159*array[p*3+0]/Lx)){
-				rarray_rho[p]=0.0;//-0.1;
-			}
-			else rarray_rho[p]=0.0;*/
-			
 		}
+		else{
+			PetscReal cx,cy,cz;
+			PetscReal rx,ry,rfac;
+			PetscReal interp_interfaces[n_interfaces];
+			PetscInt in,verif,i,j;
+			
+			for (p=0; p<nlocal; p++){
+				cx = array[3*p];
+				cy = array[3*p+1];
+				cz = array[3*p+2];
+				
+				i = (int)(cx/dx_const);
+				j = (int)(cy/dy_const);
+				
+				if (i<0 || i>=Nx-1) {printf("estranho i=%d\n",i); exit(1);}
+				if (j<0 || j>=Ny-1) {printf("estranho j=%d\n",j); exit(1);}
+
+				
+				if (i==Nx-1) i=Nx-2;
+				if (j==Ny-1) j=Ny-2;
+				
+				
+				rx = (cx-i*dx_const)/dx_const;
+				ry = (cy-j*dy_const)/dy_const;
+				
+				
+				if (rx<0 || rx>1) {printf("estranho rx=%f\n",rx); exit(1);}
+				if (ry<0 || ry>1) {printf("estranho ry=%f\n",ry); exit(1);}
+				
+				
+				for (in=0;in<n_interfaces;in++){
+					rfac = (1.0-rx)*(1.0-ry);
+					interp_interfaces[in] = interfaces[j*Nx+i + Nx*Ny*in] * rfac;
+					
+					rfac = (rx)*(1.0-ry);
+					interp_interfaces[in] += interfaces[j*Nx+(i+1) + Nx*Ny*in] * rfac;
+					
+					rfac = (1.0-rx)*(ry);
+					interp_interfaces[in] += interfaces[(j+1)*Nx+i + Nx*Ny*in] * rfac;
+					
+					rfac = (rx)*(ry);
+					interp_interfaces[in] += interfaces[(j+1)*Nx+(i+1) + Nx*Ny*in] * rfac;
+				}
+				
+				verif=0;
+				for (in=0;in<n_interfaces && verif==0;in++){
+					if (cz<interp_interfaces[in]){
+						verif=1;
+						rarray[p] = inter_geoq[in];
+						rarray_rho[p] = inter_rho[in];
+						rarray_H[p] = inter_H[in];
+					}
+				}
+				if (verif==0){
+					rarray[p] = inter_geoq[n_interfaces];
+					rarray_rho[p] = inter_rho[n_interfaces];
+					rarray_H[p] = inter_H[n_interfaces];
+					
+					//printf("entrei!\n");
+				}
+				/////!!!!
+				/*if (rank==0){
+					printf("\n");
+					for (in=0;in<n_interfaces;in++)
+						printf("Interface %d %f\n",in,interp_interfaces[in]);
+					
+					printf("%lf %lf %lf\n",cx,cy,cz);
+					
+					
+					exit(-1);
+				}*/
+				/////
+			}
+		}
+		
+		
+		
 		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);

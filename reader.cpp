@@ -37,6 +37,13 @@ extern double Delta_T;
 
 extern double H_lito;
 
+extern int n_interfaces;
+extern PetscScalar *interfaces;
+
+extern PetscScalar *inter_rho;
+extern PetscScalar *inter_geoq;
+extern PetscScalar *inter_H;
+
 extern double H_per_mass;
 extern double c_heat_capacity;
 
@@ -77,7 +84,7 @@ PetscErrorCode reader(int rank){
 	if (rank==0){
 		FILE *f_parametros;
 		
-		f_parametros = fopen("param_1.5.2.txt","r");
+		f_parametros = fopen("param_1.5.3.txt","r");
 		
 		fscanf(f_parametros,"%ld %ld %ld",&Nx,&Ny,&Nz);
 		fscanf(f_parametros,"%lg %lg %lg",&Lx,&Ly,&depth);
@@ -118,6 +125,15 @@ PetscErrorCode reader(int rank){
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"visc_MIN") == 0) fscanf(f_parametros,"%lg",&visc_MIN);
 		else {printf("visc_MIN error\n"); exit(1);}
+		
+		
+		
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"n_interfaces") == 0) fscanf(f_parametros,"%d",&n_interfaces);
+		else {printf("n_interfaces error\n"); exit(1);}
+		
+		
+		
 		
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"geoq_on") == 0) fscanf(f_parametros,"%d",&geoq_on);
@@ -292,6 +308,8 @@ PetscErrorCode reader(int rank){
 	MPI_Bcast(&visco_r,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	MPI_Bcast(&visc_MAX,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
 	MPI_Bcast(&visc_MIN,1,MPI_DOUBLE,0,PETSC_COMM_WORLD);
+	
+	MPI_Bcast(&n_interfaces,1,MPI_INT,0,PETSC_COMM_WORLD);
 
 	MPI_Bcast(&geoq_on,1,MPI_INT,0,PETSC_COMM_WORLD);
 	
@@ -355,6 +373,43 @@ PetscErrorCode reader(int rank){
 		printf("%lf %lf %lf\n",Lx,Ly,depth);
 		printf("%lf\n",beta_max);
 		printf("%lf\n%lf\n",ramp_begin,ramp_end);
+	}
+	
+	
+	
+	if (n_interfaces>0){
+		PetscCalloc1(Nx*Ny*n_interfaces,&interfaces);
+		PetscCalloc1(n_interfaces+1,&inter_geoq);
+		PetscCalloc1(n_interfaces+1,&inter_rho);
+		PetscCalloc1(n_interfaces+1,&inter_H);
+		
+		FILE *f_inter;
+		f_inter = fopen("interfaces.txt","r");
+		if (rank==0){
+			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_geoq[i]);
+			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_rho[i]);
+			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_H[i]);
+			
+			for (PetscInt i=0; i<Nx*Ny; i++){
+				for (PetscInt j=0; j<n_interfaces; j++){
+					fscanf(f_inter,"%lf",&interfaces[j*Nx*Ny+i]);
+				}
+			}
+		}
+		
+		MPI_Bcast(interfaces,Nx*Ny*n_interfaces,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		MPI_Bcast(inter_geoq,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		MPI_Bcast(inter_rho,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		MPI_Bcast(inter_H,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		
+		if (rank==1) printf("interfaces[10]=%lf do 1\n",interfaces[10]);
+		
 	}
 	
 	PetscFunctionReturn(0);
