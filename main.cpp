@@ -93,6 +93,8 @@ int main(int argc,char **args)
 	
 	
 	ierr = create_thermal_3d(Nx-1,Ny-1,Nz-1,Px,Py,Pz);CHKERRQ(ierr);
+
+	ierr = write_thermal_3d(-1);
 	
 	ierr = create_veloc_3d(Nx-1,Ny-1,Nz-1,Px,Py,Pz);CHKERRQ(ierr);
 
@@ -104,7 +106,6 @@ int main(int argc,char **args)
 	}
 	
 	int tcont=0;
-	
 	
 	ierr = veloc_total(); CHKERRQ(ierr);
 	

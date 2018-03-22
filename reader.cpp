@@ -408,8 +408,6 @@ PetscErrorCode reader(int rank){
 		MPI_Bcast(inter_rho,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
 		MPI_Bcast(inter_H,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
 		
-		if (rank==1) printf("interfaces[10]=%lf do 1\n",interfaces[10]);
-		
 	}
 	
 	PetscFunctionReturn(0);

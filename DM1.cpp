@@ -537,7 +537,7 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 		DMDANaturalToGlobalEnd(thermal_da,FN,INSERT_VALUES,F);
 		
 		
-		VecView(F,PETSC_VIEWER_STDOUT_WORLD);
+		//VecView(F,PETSC_VIEWER_STDOUT_WORLD);
 		
 		PetscBarrier(NULL);
 		
