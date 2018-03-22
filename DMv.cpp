@@ -268,6 +268,12 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 					ff[k][j][i].v = 0.0;
 				}
 				
+				if (k==P-1 && bcv_top_normal==1) ff[k][j][i].w = 0.0;
+				if (k==P-1 && bcv_top_slip==1){
+					ff[k][j][i].u = 0.0;
+					ff[k][j][i].v = 0.0;
+				}
+				
 				
 				//
 				//if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
