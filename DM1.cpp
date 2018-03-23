@@ -4,6 +4,7 @@
 #include <petsctime.h>
 
 PetscErrorCode montaKeThermal_simplif(double *Ke_local,double *Ke);
+PetscErrorCode ascii2bin();
 
 extern double alpha_exp_thermo;
 extern double gravity;
@@ -487,7 +488,8 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	PetscFunctionBeginUser;
 	ierr = DMDAGetInfo(thermal_da,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
 	
-	
+	PetscMPIInt rank;
+	ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
 	
 	
 	PetscReal temper_aux,t1_aux;
@@ -498,6 +500,13 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	PetscInt low,high;
 	
 	if (temper_extern==1){
+		
+		if (rank==0){
+			ierr = ascii2bin(); CHKERRQ(ierr);
+		}
+		MPI_Barrier(PETSC_COMM_WORLD);
+		
+		
 		PetscInt size0;
 		PetscViewer    viewer;
 		
@@ -737,4 +746,95 @@ double Thermal_profile(double t, double zz){
 	return(T);
 }
 
+PetscErrorCode ascii2bin(){
+	FILE *entra;
+	
+	//char nome[100];
+	
+	
+	entra = fopen("Temper_0_3D.txt","r");
+	char c,s[100],s1[100];
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	
+	PetscInt m=0;
+	while (!feof(entra)){
+		fscanf(entra,"%s",s);
+		if (s[0]=='P') {
+			fscanf(entra,"%s",s1);
+			//printf("%s %s\n",s,s1);
+		}
+		else {
+			//printf("%s ",s);
+			m++;
+		}
+	}
+	fclose(entra);
+	
+	m--;
+	
+	printf("1 %d\n",m);
+	
+	Vec u;
+	PetscScalar    v;
+	PetscInt	n;
+	
+	n=m;
+	
+	
+	//VecCreate(PETSC_COMM_WORLD,&u);
+	VecCreateSeq(PETSC_COMM_SELF,n,&u);
+	//VecSetSizes(u,PETSC_DECIDE,n);
+	VecSetFromOptions(u);
+	
+	
+	entra = fopen("Temper_0_3D.txt","r");
+	
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	fscanf(entra,"%c",&c);
+	while(c!='\n') fscanf(entra,"%c",&c);
+	
+	m=0;
+	while (m<n){
+		fscanf(entra,"%s",s);
+		if (s[0]=='P') {
+			fscanf(entra,"%s",s1);
+			//printf("%s %s\n",s,s1);
+		}
+		else {
+			//printf("%s ",s);
+			v = atof(s);
+			VecSetValues(u,1,&m,&v,INSERT_VALUES);
+			m++;
+		}
+	}
+	fclose(entra);
+	
+	printf("%d\n",m);
+	
+	VecAssemblyBegin(u);
+	VecAssemblyEnd(u);
+	//VecView(u,PETSC_VIEWER_STDOUT_WORLD);
+	
+	PetscViewer    viewer;
+	
+	PetscPrintf(PETSC_COMM_SELF,"writing vector in binary to vector.dat ...\n");
+	PetscViewerBinaryOpen(PETSC_COMM_SELF,"Temper_init.bin",FILE_MODE_WRITE,&viewer);
+	VecView(u,viewer);
+	PetscViewerDestroy(&viewer);
+	VecDestroy(&u);
+	
+	PetscFunctionReturn(0);
 
+}
