@@ -11,6 +11,8 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 PetscErrorCode write_veloc_3d(int cont);
 PetscErrorCode write_veloc_cond(int cont);
 
+PetscErrorCode ascii2bin(char *s1, char *s2);
+
 typedef struct {
 	PetscScalar u;
 	PetscScalar v;
@@ -89,6 +91,8 @@ extern Vec local_V;
 extern long Nx,Ny,Nz;
 
 extern double depth;
+
+extern PetscInt veloc_extern;
 
 
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
@@ -619,40 +623,100 @@ PetscErrorCode Init_Veloc(){
 	
 	PetscErrorCode         ierr;
 	
-	Stokes					***VV;
+	PetscMPIInt rank;
+	ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
 	
-	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
-	ierr = DMDAVecGetArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
 	
-	PetscInt       sx,sy,sz,mmx,mmy,mmz;
-	PetscInt i,j,k;
 	
-	ierr = DMDAGetCorners(da_Veloc,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+	PetscInt ix[1];
+	PetscScalar y[1];
 	
-	PetscInt               M,N,P;
+	PetscInt low,high;
 	
-	ierr = DMDAGetInfo(da_Veloc,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
+	PetscInt t;
+
 	
-	for (k=sz; k<sz+mmz; k++) {
-		for (j=sy; j<sy+mmy; j++) {
-			for (i=sx; i<sx+mmx; i++) {
-				//double z_aux = -depth*(1.0-k*1.0/(Nz-1));
-				//if (array[p*3+2]>-depth*(1-0.52) && array[p*3+2]<=-depth*(1-0.55)
-				/*if ((i==0 || i==Nx-1) && (z_aux>=-depth*(1.0-0.5+0.1)) && (z_aux<-depth*(1-0.6-0.1))){
-					VV[k][j][i].u=0.05/seg_per_ano;
-				}*/// condicao de contorno usada no caso da placa em subduccao (video do Assumpcao)
-				
-				/*if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
-					//VV[k][j][i].w=-0.05/seg_per_ano;
-					VV[k][j][i].w=-1.0;
-				}*/
-			}
+	if (veloc_extern==1){
+		char s1[100],s2[100];
+		
+		sprintf(s1,"veloc_0_3D.txt");
+		sprintf(s2,"veloc_init.bin");
+		
+		if (rank==0){
+			ierr = ascii2bin(s1,s2); CHKERRQ(ierr);
 		}
+		MPI_Barrier(PETSC_COMM_WORLD);
+		
+		
+		PetscInt size0;
+		PetscViewer    viewer;
+		
+		VecGetSize(Veloc,&size0);
+		
+		
+		Vec Fprov;
+		
+		//PetscPrintf(PETSC_COMM_WORLD,"size = %d\n",size);
+		
+		//PetscViewerBinaryOpen(PETSC_COMM_WORLD,"Temper_init.bin",FILE_MODE_READ,&viewer);
+		PetscViewerBinaryOpen(PETSC_COMM_WORLD,s2,FILE_MODE_READ,&viewer);
+		VecCreate(PETSC_COMM_WORLD,&Fprov);
+		VecLoad(Fprov,viewer);
+		PetscViewerDestroy(&viewer);
+		
+		
+		VecGetOwnershipRange(Fprov,&low,&high);
+		
+		printf("%d %d\n",low,high);
+		
+		
+		Vec FN;
+		
+		DMDACreateNaturalVector(da_Veloc,&FN);
+		
+		
+		for (t=low;t<high;t++){
+			ix[0] = t;
+			VecGetValues(Fprov,1,ix,y);
+			VecSetValue(FN,t,y[0], INSERT_VALUES);
+		}
+		
+		VecAssemblyBegin(FN);
+		VecAssemblyEnd(FN);
+		
+		DMDANaturalToGlobalBegin(da_Veloc,FN,INSERT_VALUES,Veloc);
+		DMDANaturalToGlobalEnd(da_Veloc,FN,INSERT_VALUES,Veloc);
+		
+		
+		//VecView(F,PETSC_VIEWER_STDOUT_WORLD);
+		
+		PetscBarrier(NULL);
+		
+		VecAssemblyBegin(Veloc);
+		VecAssemblyEnd(Veloc);
+
+	}
+	else {
+		
+		Stokes					***VV;
+		
+		ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
+		ierr = DMDAVecGetArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+		
+		PetscInt       sx,sy,sz,mmx,mmy,mmz;
+		
+		ierr = DMDAGetCorners(da_Veloc,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+		
+		PetscInt               M,N,P;
+		
+		ierr = DMDAGetInfo(da_Veloc,0,&M,&N,&P,0,0,0, 0,0,0,0,0,0);CHKERRQ(ierr);
+		
+		ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalBegin(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalEnd(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
 	}
 	
-	ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(da_Veloc,local_V,INSERT_VALUES,Veloc);CHKERRQ(ierr);
+	
 	
 	VecCopy(Veloc,Veloc_fut);
 	VecCopy(Veloc,Veloc_0);

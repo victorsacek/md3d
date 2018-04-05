@@ -43,6 +43,8 @@ double comp_alpha_thermal = 1.0 - alpha_thermal;
 PetscReal rtol;
 
 PetscInt temper_extern;
+PetscInt veloc_extern;
+PetscInt bcv_extern;
 
 /////////
 

@@ -16,6 +16,8 @@ extern int bcv_left_slip;
 extern int bcv_right_normal;
 extern int bcv_right_slip;
 
+extern PetscInt bcv_extern;
+
 
 typedef struct {
 	PetscScalar u;
@@ -23,6 +25,8 @@ typedef struct {
 	PetscScalar w;
 	//PetscScalar p;
 } Stokes;
+
+PetscErrorCode ascii2bin(char *s1, char *s2);
 
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da);
 
@@ -237,58 +241,120 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMDAVecGetArray(da_Veloc,local_FV,&ff);CHKERRQ(ierr);
 	
 	PetscInt       sx,sy,sz,mmx,mmy,mmz;
-	PetscInt i,j,k;
+	PetscInt i,j,k,t;
 	
 	ierr = DMDAGetCorners(da_Veloc,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
 	
-	for (k=sz; k<sz+mmz; k++) {
-		for (j=sy; j<sy+mmy; j++) {
-			for (i=sx; i<sx+mmx; i++) {
-				ff[k][j][i].u = 1.0;
-				ff[k][j][i].v = 1.0;
-				ff[k][j][i].w = 1.0;
-				
-				if (i==0   && bcv_left_normal==1) ff[k][j][i].u = 0.0;
-				if (i==0   && bcv_left_slip==1) {
-					ff[k][j][i].v = 0.0;
-					ff[k][j][i].w = 0.0;
+	PetscInt ix[1];
+	PetscScalar y[1];
+	
+	PetscInt low,high;
+	
+	if (bcv_extern==1){
+		char s1[100],s2[100];
+		
+		sprintf(s1,"bcv_0_3D.txt");
+		sprintf(s2,"bcv_init.bin");
+		
+		if (rank==0){
+			ierr = ascii2bin(s1,s2); CHKERRQ(ierr);
+		}
+		MPI_Barrier(PETSC_COMM_WORLD);
+		
+		
+		PetscInt size0;
+		PetscViewer    viewer;
+		
+		VecGetSize(Veloc_Cond,&size0);
+		
+		
+		Vec Fprov;
+		
+		//PetscPrintf(PETSC_COMM_WORLD,"size = %d\n",size);
+		
+		//PetscViewerBinaryOpen(PETSC_COMM_WORLD,"Temper_init.bin",FILE_MODE_READ,&viewer);
+		PetscViewerBinaryOpen(PETSC_COMM_WORLD,s2,FILE_MODE_READ,&viewer);
+		VecCreate(PETSC_COMM_WORLD,&Fprov);
+		VecLoad(Fprov,viewer);
+		PetscViewerDestroy(&viewer);
+		
+		
+		VecGetOwnershipRange(Fprov,&low,&high);
+		
+		printf("%d %d\n",low,high);
+		
+		
+		Vec FN;
+		
+		DMDACreateNaturalVector(da_Veloc,&FN);
+		
+		
+		for (t=low;t<high;t++){
+			ix[0] = t;
+			VecGetValues(Fprov,1,ix,y);
+			VecSetValue(FN,t,y[0], INSERT_VALUES);
+		}
+		
+		VecAssemblyBegin(FN);
+		VecAssemblyEnd(FN);
+		
+		DMDANaturalToGlobalBegin(da_Veloc,FN,INSERT_VALUES,Veloc_Cond);
+		DMDANaturalToGlobalEnd(da_Veloc,FN,INSERT_VALUES,Veloc_Cond);
+		
+		
+		//VecView(F,PETSC_VIEWER_STDOUT_WORLD);
+		
+		PetscBarrier(NULL);
+		
+		VecAssemblyBegin(Veloc_Cond);
+		VecAssemblyEnd(Veloc_Cond);
+
+		
+		
+	}
+	else {
+		for (k=sz; k<sz+mmz; k++) {
+			for (j=sy; j<sy+mmy; j++) {
+				for (i=sx; i<sx+mmx; i++) {
+					ff[k][j][i].u = 1.0;
+					ff[k][j][i].v = 1.0;
+					ff[k][j][i].w = 1.0;
+					
+					if (i==0   && bcv_left_normal==1) ff[k][j][i].u = 0.0;
+					if (i==0   && bcv_left_slip==1) {
+						ff[k][j][i].v = 0.0;
+						ff[k][j][i].w = 0.0;
+					}
+					
+					if (i==M-1 && bcv_right_normal==1)ff[k][j][i].u = 0.0;
+					if (i==M-1   && bcv_right_slip==1) {
+						ff[k][j][i].v = 0.0;
+						ff[k][j][i].w = 0.0;
+					}
+					
+					if (j==0 || j==N-1) ff[k][j][i].v = 0.0;
+					
+					if (k==0   && bcv_bot_normal==1) ff[k][j][i].w = 0.0;
+					if (k==0   && bcv_bot_slip==1){
+						ff[k][j][i].u = 0.0;
+						ff[k][j][i].v = 0.0;
+					}
+					
+					if (k==P-1 && bcv_top_normal==1) ff[k][j][i].w = 0.0;
+					if (k==P-1 && bcv_top_slip==1){
+						ff[k][j][i].u = 0.0;
+						ff[k][j][i].v = 0.0;
+					}
+					
 				}
-				
-				if (i==M-1 && bcv_right_normal==1)ff[k][j][i].u = 0.0;
-				if (i==M-1   && bcv_right_slip==1) {
-					ff[k][j][i].v = 0.0;
-					ff[k][j][i].w = 0.0;
-				}
-				
-				if (j==0 || j==N-1) ff[k][j][i].v = 0.0;
-				
-				if (k==0   && bcv_bot_normal==1) ff[k][j][i].w = 0.0;
-				if (k==0   && bcv_bot_slip==1){
-					ff[k][j][i].u = 0.0;
-					ff[k][j][i].v = 0.0;
-				}
-				
-				if (k==P-1 && bcv_top_normal==1) ff[k][j][i].w = 0.0;
-				if (k==P-1 && bcv_top_slip==1){
-					ff[k][j][i].u = 0.0;
-					ff[k][j][i].v = 0.0;
-				}
-				
-				
-				//
-				//if ((i*dx_const>Lx/2-Lx*0.08) && (i*dx_const<Lx/2+Lx*0.08) && k==P-1){
-				//	ff[k][j][i].w = 0.0;
-				//	ff[k][j][i].u = 0.0;
-				//	ff[k][j][i].v = 0.0;
-				//}
-				//condition specific for the punch removed
 			}
 		}
+		ierr = DMDAVecRestoreArray(da_Veloc,local_FV,&ff);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalBegin(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalEnd(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
 	}
 	
-	ierr = DMDAVecRestoreArray(da_Veloc,local_FV,&ff);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalBegin(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
-	ierr = DMLocalToGlobalEnd(da_Veloc,local_FV,INSERT_VALUES,Veloc_Cond);CHKERRQ(ierr);
+	
 	
 	if (rank==0) printf("Init_veloc\n");
 	Init_Veloc();

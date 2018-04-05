@@ -4,7 +4,7 @@
 #include <petsctime.h>
 
 PetscErrorCode montaKeThermal_simplif(double *Ke_local,double *Ke);
-PetscErrorCode ascii2bin();
+PetscErrorCode ascii2bin(char *s1, char *s2);
 
 extern double alpha_exp_thermo;
 extern double gravity;
@@ -62,6 +62,8 @@ extern Vec local_TC;
 extern Vec local_V;
 
 extern PetscInt temper_extern;
+extern PetscInt veloc_extern;
+extern PetscInt bcv_extern;
 
 double Thermal_profile(double t, double zz);
 
@@ -501,8 +503,13 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 	
 	if (temper_extern==1){
 		
+		char s1[100],s2[100];
+		
+		sprintf(s1,"Temper_0_3D.txt");
+		sprintf(s2,"Temper_init.bin");
+		
 		if (rank==0){
-			ierr = ascii2bin(); CHKERRQ(ierr);
+			ierr = ascii2bin(s1,s2); CHKERRQ(ierr);
 		}
 		MPI_Barrier(PETSC_COMM_WORLD);
 		
@@ -517,7 +524,8 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 		
 		//PetscPrintf(PETSC_COMM_WORLD,"size = %d\n",size);
 		
-		PetscViewerBinaryOpen(PETSC_COMM_WORLD,"Temper_init.bin",FILE_MODE_READ,&viewer);
+		//PetscViewerBinaryOpen(PETSC_COMM_WORLD,"Temper_init.bin",FILE_MODE_READ,&viewer);
+		PetscViewerBinaryOpen(PETSC_COMM_WORLD,s2,FILE_MODE_READ,&viewer);
 		VecCreate(PETSC_COMM_WORLD,&Fprov);
 		VecLoad(Fprov,viewer);
 		PetscViewerDestroy(&viewer);
@@ -746,13 +754,11 @@ double Thermal_profile(double t, double zz){
 	return(T);
 }
 
-PetscErrorCode ascii2bin(){
+PetscErrorCode ascii2bin(char *ss1, char *ss2){
 	FILE *entra;
 	
-	//char nome[100];
-	
-	
-	entra = fopen("Temper_0_3D.txt","r");
+	//entra = fopen("Temper_0_3D.txt","r");
+	entra = fopen(ss1,"r");
 	char c,s[100],s1[100];
 	fscanf(entra,"%c",&c);
 	while(c!='\n') fscanf(entra,"%c",&c);
@@ -768,10 +774,8 @@ PetscErrorCode ascii2bin(){
 		fscanf(entra,"%s",s);
 		if (s[0]=='P') {
 			fscanf(entra,"%s",s1);
-			//printf("%s %s\n",s,s1);
 		}
 		else {
-			//printf("%s ",s);
 			m++;
 		}
 	}
@@ -787,14 +791,10 @@ PetscErrorCode ascii2bin(){
 	
 	n=m;
 	
-	
-	//VecCreate(PETSC_COMM_WORLD,&u);
 	VecCreateSeq(PETSC_COMM_SELF,n,&u);
-	//VecSetSizes(u,PETSC_DECIDE,n);
 	VecSetFromOptions(u);
 	
-	
-	entra = fopen("Temper_0_3D.txt","r");
+	entra = fopen(ss1,"r");
 	
 	fscanf(entra,"%c",&c);
 	while(c!='\n') fscanf(entra,"%c",&c);
@@ -810,10 +810,8 @@ PetscErrorCode ascii2bin(){
 		fscanf(entra,"%s",s);
 		if (s[0]=='P') {
 			fscanf(entra,"%s",s1);
-			//printf("%s %s\n",s,s1);
 		}
 		else {
-			//printf("%s ",s);
 			v = atof(s);
 			VecSetValues(u,1,&m,&v,INSERT_VALUES);
 			m++;
@@ -825,12 +823,12 @@ PetscErrorCode ascii2bin(){
 	
 	VecAssemblyBegin(u);
 	VecAssemblyEnd(u);
-	//VecView(u,PETSC_VIEWER_STDOUT_WORLD);
 	
 	PetscViewer    viewer;
 	
 	PetscPrintf(PETSC_COMM_SELF,"writing vector in binary to vector.dat ...\n");
-	PetscViewerBinaryOpen(PETSC_COMM_SELF,"Temper_init.bin",FILE_MODE_WRITE,&viewer);
+	//PetscViewerBinaryOpen(PETSC_COMM_SELF,"Temper_init.bin",FILE_MODE_WRITE,&viewer);
+	PetscViewerBinaryOpen(PETSC_COMM_SELF,ss2,FILE_MODE_WRITE,&viewer);
 	VecView(u,viewer);
 	PetscViewerDestroy(&viewer);
 	VecDestroy(&u);
