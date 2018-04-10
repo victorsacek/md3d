@@ -40,6 +40,21 @@ extern PetscScalar *inter_rho;
 extern PetscScalar *inter_geoq;
 extern PetscScalar *inter_H;
 
+extern PetscInt particles_add_remove;
+
+extern PetscInt *ppp;
+extern PetscInt *p_remove;
+extern PetscInt *p_i;
+
+extern PetscReal *p_add_coor;
+extern PetscReal *p_add_r;
+extern PetscReal *p_add_r_rho;
+extern PetscReal *p_add_r_H;
+extern PetscInt *p_add_i;
+extern PetscReal *p_add_r_strain;
+
+
+
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 {
 	
@@ -253,7 +268,9 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmSetLocalSizes(dms,milocal*mjlocal*mklocal*(particles_per_ele),4);CHKERRQ(ierr);
 		ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
 		
-		printf("%d: %d\n",rank,nlocal);
+		particles_add_remove = milocal*mjlocal*mklocal;
+		
+		printf("%d: %d\nparticles_add_remove = %d",rank,nlocal,particles_add_remove);
 		
 		ierr = DMSwarmGetField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		
@@ -414,6 +431,20 @@ PetscErrorCode createSwarm()
 	
 	
 	MPI_Barrier(PETSC_COMM_WORLD);
+	
+	
+	ierr = PetscCalloc1(particles_add_remove ,&ppp);
+	ierr = PetscCalloc1(particles_add_remove ,&p_remove);
+	ierr = PetscCalloc1(particles_add_remove ,&p_i);
+	
+	ierr = PetscCalloc1(particles_add_remove*3,&p_add_coor);
+	ierr = PetscCalloc1(particles_add_remove ,&p_add_r);
+	ierr = PetscCalloc1(particles_add_remove ,&p_add_r_rho);
+	ierr = PetscCalloc1(particles_add_remove ,&p_add_r_H);
+	ierr = PetscCalloc1(particles_add_remove ,&p_add_i);
+	ierr = PetscCalloc1(particles_add_remove ,&p_add_r_strain);
+	
+	
 	
 	PetscFunctionReturn(0);
 	

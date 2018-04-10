@@ -253,6 +253,21 @@ DM dms;
 
 PetscInt particles_per_ele=27;
 
+PetscInt particles_add_remove;
+
+PetscInt *ppp;
+PetscInt *p_remove;
+PetscInt *p_i;
+
+PetscReal *p_add_coor;
+PetscReal *p_add_r;
+PetscReal *p_add_r_rho;
+PetscReal *p_add_r_H;
+PetscInt *p_add_i;
+PetscReal *p_add_r_strain;
+
+
+
 PetscInt cont_particles=0;
 
 

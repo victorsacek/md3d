@@ -45,6 +45,19 @@ extern PetscInt cont_particles;
 
 extern long V_NE;
 
+extern PetscInt particles_add_remove;
+
+extern PetscInt *ppp;
+extern PetscInt *p_remove;
+extern PetscInt *p_i;
+
+extern PetscReal *p_add_coor;
+extern PetscReal *p_add_r;
+extern PetscReal *p_add_r_rho;
+extern PetscReal *p_add_r_H;
+extern PetscInt *p_add_i;
+extern PetscReal *p_add_r_strain;
+
 
 
 PetscErrorCode moveSwarm(PetscReal dt)
@@ -336,19 +349,14 @@ PetscErrorCode Swarm_add_remove()
 	PetscInt min_particles_per_ele=particles_per_ele-particles_per_ele/10-2;
 	
 	PetscInt kk,pp;
-	PetscInt ppp[particles_per_ele*50],cont_p;
+	PetscInt cont_p;
 	
-	PetscInt p_remove[particles_per_ele*50],cont_p_remove=0;
-	PetscInt p_i[particles_per_ele*50];
+	PetscInt cont_p_remove=0;
+	
 	
 	
 	PetscInt cont_p_add=0;
-	PetscReal p_add_coor[particles_per_ele*50*3];
-	PetscReal p_add_r[particles_per_ele*50];
-	PetscReal p_add_r_rho[particles_per_ele*50];
-	PetscReal p_add_r_H[particles_per_ele*50];
-	PetscInt p_add_i[particles_per_ele*50];
-	PetscReal p_add_r_strain[particles_per_ele*50];
+	
 	
 	
 	
@@ -471,8 +479,8 @@ PetscErrorCode Swarm_add_remove()
 					cont_p_remove++;
 					
 					
-					if (cont_p_remove>particles_per_ele*50){
-						printf("MUITO\n");
+					if (cont_p_remove>particles_add_remove){
+						printf("MUITO1\n");
 						exit(1);
 					}
 					
@@ -542,8 +550,8 @@ PetscErrorCode Swarm_add_remove()
 					
 					
 					cont_p_add++;
-					if (cont_p_add>particles_per_ele*50){
-						printf("MUITO\n");
+					if (cont_p_add>particles_add_remove){
+						printf("MUITO2\n");
 						exit(1);
 					}
 				}
@@ -589,7 +597,7 @@ PetscErrorCode Swarm_add_remove()
 	}
 	
 	ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
-	printf("nlocal_%d %d %d_depois\n",nlocal,cont_p_remove,particles_per_ele*50);
+	printf("nlocal_%d %d %d_depois\n",nlocal,cont_p_remove,particles_add_remove);
 	
 	if (cont_p_add>0){
 		ierr = DMSwarmAddNPoints(dms,cont_p_add);
@@ -627,7 +635,7 @@ PetscErrorCode Swarm_add_remove()
 	}
 	
 	ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
-	printf("nlocal_%d %d %d_depois2\n",nlocal,cont_p_add,particles_per_ele*50);
+	printf("nlocal_%d %d %d_depois2\n",nlocal,cont_p_add,particles_add_remove);
 	
 	
 	//exit(1);
