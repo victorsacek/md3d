@@ -91,6 +91,9 @@ int main(int argc,char **args)
 	denok_min = 1.0E-4;
 	ierr = PetscOptionsGetReal(NULL,NULL,"-denok",&denok_min,NULL);CHKERRQ(ierr);
 	
+	print_visc = 0;
+	ierr = PetscOptionsGetReal(NULL,NULL,"-print_visc",&print_visc,NULL);CHKERRQ(ierr);
+	
 	dx_const = Lx/(Nx-1);
 	dy_const = Ly/(Ny-1);
 	dz_const = depth/(Nz-1);
@@ -111,7 +114,7 @@ int main(int argc,char **args)
 		PetscPrintf(PETSC_COMM_WORLD,"Swarm FIM\n");
 	}
 	
-	int tcont=0;
+	
 	
 	ierr = veloc_total(); CHKERRQ(ierr);
 	

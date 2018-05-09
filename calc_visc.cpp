@@ -109,10 +109,22 @@ double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
 	
 	///!!!!
 	if (WITH_NON_LINEAR==1){
-		visco_real = visco_r;
+		//double c0 = 1.0;//!!!!
+		//double mu = 0.01;//!!!!
+		double c0 = 22.0E6;//!!!! Petersen et al. (2010)
+		double mu = 0.58778;//!!!!
+		double tau_yield = c0 + mu*10.0*3300.*(-z);//!!!!
+		
+		double visco_yield = visc_MAX;
+		
+		if (e2_inva>0) visco_yield = tau_yield/e2_inva;
+		
+		if (visco_real>visco_yield) visco_real = visco_yield;
+		
+		/*visco_real = visco_r;
 		if (2*visco_real*e2_inva-1.0>0){
 			visco_real = 1.0/(2*(e2_inva));
-		}
+		}*/
 		//if (e2_inva>0)	visco_real = 1.0/(2*(e2_inva));//!!!! rigid plastic
 	}
 	

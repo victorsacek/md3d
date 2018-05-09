@@ -34,8 +34,9 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da, Vec FP);
 
 PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_const, double dz_const);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
-									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele);
+PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
+									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele,
+									PetscReal z_base);
 
 PetscErrorCode montaCeVeloc(PetscReal *Ce);
 
@@ -117,6 +118,7 @@ extern PetscReal rtol;
 extern PetscReal denok_min;
 
 
+
 extern Vec Precon;
 extern Vec local_Precon;
 
@@ -125,6 +127,10 @@ extern double visc_aux_MIN;
 
 extern double e2_aux_MAX;
 extern double e2_aux_MIN;
+
+extern double dz_const;
+
+
 
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
@@ -747,19 +753,24 @@ PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_c
 
 
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
-									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele){
+PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
+									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele,
+									PetscReal z_base){
 	
 	long i,j;
 	
-	double Visc_local,Temper_local,Geoq_local,e2_local,e2_cumulat;
+	double Visc_local,Temper_local,Geoq_local,e2_local,e2_cumulat,z_local;
+	double visc_meio;
 	
+	PetscErrorCode ierr=0;
 	
 	double kx,ky,kz;
 	
 	double ex,ey,ez;
 	
 	long cont;
+	
+	
 	
 	//PetscReal Visc_ele[V_NE];
 	
@@ -843,9 +854,12 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 				
 				//if (e2_local>0) printf("e2_local > 0\n");
 				
+				z_local = z_base + dz_const*(kz+1.0)/2.0;
 				
+				Visc_local = calc_visco_ponto(Temper_local,z_local,Geoq_local,e2_local);
 				
-				Visc_local = calc_visco_ponto(Temper_local,0.0/*(z) mudar!!!!*/,Geoq_local,e2_local);
+				if (kx==0 && ky==0 && kz==0) visc_meio = Visc_local;
+				
 				
 				if (Visc_local<visc_aux_MIN) visc_aux_MIN=Visc_local;
 				if (Visc_local>visc_aux_MAX) visc_aux_MAX=Visc_local;
@@ -864,9 +878,11 @@ PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temp
 		}
 	}
 	
+	
+	
 	//printf("Visc_min = %lg; Visc_max = %lg\n",Visc_min,Visc_max);
 	
-	PetscFunctionReturn(0);
+	return(visc_meio);
 
 }
 

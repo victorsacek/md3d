@@ -27,6 +27,11 @@ PetscScalar *inter_H;
 
 /////////
 
+int tcont=0;
+
+
+/////////
+
 double seg_per_ano = 365.0*24.0*3600.0;
 
 double dt_calor = 40000.0;
@@ -193,6 +198,8 @@ PetscReal *N_z_Gauss;
 /////////
 
 PetscReal denok_min;
+
+PetscReal print_visc;
 
 Mat VA, VB, VG;
 Vec Vf, Veloc, Veloc_fut,Veloc_weight,Veloc_0;

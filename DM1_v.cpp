@@ -5,8 +5,9 @@
 
 PetscErrorCode DMDAGetElementCorners(DM da,PetscInt *sx,PetscInt *sy,PetscInt *sz,PetscInt *mx,PetscInt *my,PetscInt *mz);
 
-PetscErrorCode montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
-									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele);
+PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
+									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele,
+									PetscReal z_base);
 
 PetscErrorCode write_veloc_3d(int cont);
 PetscErrorCode write_veloc_cond(int cont);
@@ -36,6 +37,8 @@ extern PetscReal *Ke_veloc_general;
 extern double dx_const;
 extern double dy_const;
 extern double dz_const;
+
+extern double depth;
 
 extern DM da_Veloc;
 
@@ -93,6 +96,11 @@ extern long Nx,Ny,Nz;
 extern double depth;
 
 extern PetscInt veloc_extern;
+
+extern PetscReal print_visc;
+
+extern int tcont;
+extern long print_step;
 
 
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
@@ -214,6 +222,25 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	e2_aux_MAX = 0.0;
 	e2_aux_MIN = 1.0E50;
 	
+	PetscReal z_base;
+	
+	FILE *sai_visc;
+	
+	if (print_visc==1 && tcont%print_step==0) {
+		
+		char nome[200];
+		
+		PetscMPIInt rank;
+		ierr = MPI_Comm_rank(PETSC_COMM_WORLD,&rank);CHKERRQ(ierr);
+		
+		sprintf(nome,"visc_%d_%d.txt",tcont,rank);
+		
+		sai_visc = fopen(nome,"w");
+		
+	}
+	
+	PetscReal visc_meio;
+	
 
 	for (ek = sez; ek < sez+mz; ek++) {
 		for (ej = sey; ej < sey+my; ej++) {
@@ -237,8 +264,14 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 				for (i=0;i<T_NE;i++) VY_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].v;
 				for (i=0;i<T_NE;i++) VZ_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].w;
 				
+				z_base = -depth + ek*dz_const;///!!!!
 				
-				montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele,geoq_ele,e2_ele,VX_ele,VY_ele,VZ_ele);
+				
+				visc_meio = montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele,geoq_ele,e2_ele,VX_ele,VY_ele,VZ_ele,z_base);
+				
+				if (print_visc==1 && tcont%print_step==0) {
+					fprintf(sai_visc,"%d %d %d %lg\n",ei,ej,ek,visc_meio);
+				}
 				
 				for (i=0;i<V_GT*V_GT;i++) Ke_veloc_final[i]=Ke_veloc[i]*volume;
 				
@@ -325,6 +358,11 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 			}
 		}
 	}
+	
+	if (print_visc==1 && tcont%print_step==0) {
+		fclose(sai_visc);
+	}
+	
 	ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 	ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 	
