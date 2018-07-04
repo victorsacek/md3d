@@ -58,7 +58,7 @@ extern PetscReal *p_add_r_H;
 extern PetscInt *p_add_i;
 extern PetscReal *p_add_r_strain;
 
-
+extern unsigned int seed;
 
 PetscErrorCode moveSwarm(PetscReal dt)
 {
@@ -364,13 +364,13 @@ PetscErrorCode Swarm_add_remove()
 	PetscReal dist,dist_p;
 	PetscInt chosen;
 	
-	PetscRandom rand;
+	//PetscRandom rand;
 	
 	PetscReal rx,ry,rz,xx,yy,zz;
 	
-	ierr = PetscRandomCreate(PETSC_COMM_SELF,&rand);CHKERRQ(ierr);
-	ierr = PetscRandomSetType(rand,PETSCRAND48);CHKERRQ(ierr);
-	ierr = PetscRandomSetInterval(rand,-1.0,1.0);CHKERRQ(ierr);
+	//ierr = PetscRandomCreate(PETSC_COMM_SELF,&rand);CHKERRQ(ierr);
+	//ierr = PetscRandomSetType(rand,PETSCRAND48);CHKERRQ(ierr);
+	//ierr = PetscRandomSetInterval(rand,-1.0,1.0);CHKERRQ(ierr);
 	
 	
 	for (k=mz; k<=Mz; k++){
@@ -500,9 +500,12 @@ PetscErrorCode Swarm_add_remove()
 						}
 					}
 					for (pp=0;pp<10;pp++){
-						ierr = PetscRandomGetValueReal(rand,&rx);CHKERRQ(ierr);
-						ierr = PetscRandomGetValueReal(rand,&ry);CHKERRQ(ierr);
-						ierr = PetscRandomGetValueReal(rand,&rz);CHKERRQ(ierr);
+						//ierr = PetscRandomGetValueReal(rand,&rx);CHKERRQ(ierr);
+						//ierr = PetscRandomGetValueReal(rand,&ry);CHKERRQ(ierr);
+						//ierr = PetscRandomGetValueReal(rand,&rz);CHKERRQ(ierr);
+						rx = 2.0*(float)rand_r(&seed)/RAND_MAX-1.0;
+						ry = 2.0*(float)rand_r(&seed)/RAND_MAX-1.0;
+						rz = 2.0*(float)rand_r(&seed)/RAND_MAX-1.0;
 						
 						cx_v[pp] = i*dx_const + (0.5*rx+0.5)*dx_const;
 						cy_v[pp] = j*dy_const + (0.5*ry+0.5)*dy_const;
@@ -561,7 +564,7 @@ PetscErrorCode Swarm_add_remove()
 	}
 	
 	
-	ierr = PetscRandomDestroy(&rand);CHKERRQ(ierr);
+	//ierr = PetscRandomDestroy(&rand);CHKERRQ(ierr);
 	
 	//printf("%d %d   %d %d   %d %d\n",mx,Mx,my,My,mz,Mz);
 	

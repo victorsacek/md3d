@@ -75,6 +75,8 @@ extern PetscInt WITH_NON_LINEAR;
 extern PetscInt WITH_ADIABATIC_H;
 extern PetscInt WITH_RADIOGENIC_H;
 
+extern unsigned int seed;
+
 
 typedef struct {
 	PetscScalar u;
@@ -608,7 +610,7 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 					if (T_initial_cond==3){
 						temper_aux = Temper3(xx,zz);
 						
-						temper_aux-=(float)rand()/RAND_MAX;
+						temper_aux-=(float)rand_r(&seed)/RAND_MAX;
 					}
 					
 					if (T_initial_cond==8){
@@ -621,7 +623,7 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 						
 						if (temper_aux>Delta_T) temper_aux=Delta_T;
 						
-						temper_aux-=(float)rand()/RAND_MAX;
+						temper_aux-=(float)rand_r(&seed)/RAND_MAX;
 					}
 					
 					
@@ -652,7 +654,7 @@ PetscErrorCode Thermal_init(Vec F,DM thermal_da)
 						
 						if (temper_aux>Delta_T) temper_aux=Delta_T;
 						
-						temper_aux-=(float)rand()/RAND_MAX;
+						temper_aux-=(float)rand_r(&seed)/RAND_MAX;
 					}
 					
 					

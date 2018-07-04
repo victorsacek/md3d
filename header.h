@@ -277,6 +277,8 @@ PetscReal *p_add_r_strain;
 
 PetscInt cont_particles=0;
 
+unsigned int seed;
+
 
 ////// Flags
 PetscInt WITH_NON_LINEAR = 0; // Controla o uso da reologia plástica e/ou viscosidade não linear

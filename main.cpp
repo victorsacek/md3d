@@ -61,6 +61,7 @@ int main(int argc,char **args)
 	int rank;
 	MPI_Comm_rank(PETSC_COMM_WORLD,&rank);
 	
+	seed = rank;
 	
 	reader(rank);
 	

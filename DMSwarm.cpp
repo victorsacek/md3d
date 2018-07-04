@@ -53,6 +53,7 @@ extern PetscReal *p_add_r_H;
 extern PetscInt *p_add_i;
 extern PetscReal *p_add_r_strain;
 
+extern unsigned int seed;
 
 
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
@@ -225,7 +226,7 @@ PetscErrorCode createSwarm()
 	PetscReal *rarray_rho;
 	PetscReal *rarray_H;
 	
-	PetscRandom rand;
+	//PetscRandom rand;
 	
 	
 	ierr = DMShellCreate(PETSC_COMM_WORLD,&dmcell);CHKERRQ(ierr);
@@ -283,17 +284,21 @@ PetscErrorCode createSwarm()
 		}*/
 		
 		cnt = 0;
-		ierr = PetscRandomCreate(PETSC_COMM_SELF,&rand);CHKERRQ(ierr);
-		ierr = PetscRandomSetType(rand,PETSCRAND48);CHKERRQ(ierr);
-		ierr = PetscRandomSetInterval(rand,-1.0,1.0);CHKERRQ(ierr);
+		//ierr = PetscRandomCreate(PETSC_COMM_SELF,&rand);CHKERRQ(ierr);
+		//ierr = PetscRandomSetType(rand,PETSCRAND48);CHKERRQ(ierr);
+		//ierr = PetscRandomSetInterval(rand,-1.0,1.0);CHKERRQ(ierr);
+		
 		for (p=0; p<nlocal/particles_per_ele; p++) {
 			PetscReal px,py,pz,rx,ry,rz;
 			
 			for (cont=0;cont<particles_per_ele;cont++){
 				
-				ierr = PetscRandomGetValueReal(rand,&rx);CHKERRQ(ierr);
-				ierr = PetscRandomGetValueReal(rand,&ry);CHKERRQ(ierr);
-				ierr = PetscRandomGetValueReal(rand,&rz);CHKERRQ(ierr);
+				//ierr = PetscRandomGetValueReal(rand,&rx);CHKERRQ(ierr);
+				//ierr = PetscRandomGetValueReal(rand,&ry);CHKERRQ(ierr);
+				//ierr = PetscRandomGetValueReal(rand,&rz);CHKERRQ(ierr);
+				rx = 2.0*(float)rand_r(&seed)/RAND_MAX-1.0;
+				ry = 2.0*(float)rand_r(&seed)/RAND_MAX-1.0;
+				rz = 2.0*(float)rand_r(&seed)/RAND_MAX-1.0;
 				
 				px = LA_coors[3*p+0] + (0.5*rx+0.5)*dx_const;
 				py = LA_coors[3*p+1] + (0.5*ry+0.5)*dy_const;
@@ -309,7 +314,7 @@ PetscErrorCode createSwarm()
 			
 		}
 		
-		ierr = PetscRandomDestroy(&rand);CHKERRQ(ierr);
+		//ierr = PetscRandomDestroy(&rand);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		ierr = VecRestoreArray(coors,&LA_coors);CHKERRQ(ierr);
 		ierr = DMSwarmSetLocalSizes(dms,cnt,4);CHKERRQ(ierr);
