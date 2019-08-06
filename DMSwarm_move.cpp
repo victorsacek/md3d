@@ -167,7 +167,7 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		vz += VV[k+1][j+1][i+1].w * rfac;
 		
 		
-		/////////cumulative strain
+		///////// strain
 		
 		
 		kx = 2*rx-1;
@@ -225,8 +225,8 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		
 		
 		
-		//strain_fac[p]+= dt*PetscSqrtReal(E2_invariant);//original!!!!
-		strain_fac[p]= PetscSqrtReal(E2_invariant);//!!!! não é o cumulativo! apenas o instantaneo.
+		strain_fac[p]+= dt*PetscSqrtReal(E2_invariant);//original!!!!
+		//strain_fac[p]= PetscSqrtReal(E2_invariant);//!!!! não é o cumulativo! apenas o instantaneo.
 		
 		
 		//dt=0.01;

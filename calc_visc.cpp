@@ -16,8 +16,25 @@ extern double Delta_T;
 extern PetscInt WITH_NON_LINEAR;
 
 
+double strain_softening(double strain, double f1, double f2){
+	double fac;
+	
+	double st1=0.05,st2=1.05;
 
-double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
+	if (strain<st1) fac=f1;
+	else{
+		if (strain>st2) fac=f2;
+		else{
+			fac = f1 - (f1-f2)*(strain-st1)/(st2-st1);
+		}
+	}
+	
+	return(fac);
+}
+
+
+
+double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,double strain_cumulate){
 	
 	double visco_real;
 	
@@ -97,6 +114,10 @@ double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
 		
 	}
 	
+	if (rheol==7){
+		
+	}
+	
 	
 	if (rheol>6){
 		printf("rheol error: larger than maximum available option\n");
@@ -111,9 +132,13 @@ double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva){
 	if (WITH_NON_LINEAR==1){
 		//double c0 = 1.0;//!!!!
 		//double mu = 0.01;//!!!!
-		double c0 = 22.0E6;//!!!! Petersen et al. (2010)
-		double mu = 0.58778;//!!!!
-		double tau_yield = c0 + mu*10.0*3300.*(-z);//!!!!
+		//double c0 = 22.0E6;//!!!! Petersen et al. (2010)
+		//double mu = 0.58778;//!!!!
+		
+		double c0 = strain_softening(strain_cumulate,20.0E6,4.0E6);
+		double mu = strain_softening(strain_cumulate,0.261799,0.034906);
+		
+		double tau_yield = c0*cos(mu) + sin(mu)*10.0*3300.*(-z);//!!!!
 		
 		double visco_yield = visc_MAX;
 		

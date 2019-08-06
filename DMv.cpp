@@ -50,7 +50,7 @@ PetscErrorCode write_veloc_cond(int cont);
 
 PetscErrorCode Init_Veloc();
 
-double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva);
+double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,double strain_cumulate);
 
 extern double r06;
 extern double r8p9;
@@ -856,7 +856,7 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 				
 				z_local = z_base + dz_const*(kz+1.0)/2.0;
 				
-				Visc_local = calc_visco_ponto(Temper_local,z_local,Geoq_local,e2_local);
+				Visc_local = calc_visco_ponto(Temper_local,z_local,Geoq_local,e2_local,e2_cumulat);
 				
 				if (kx==0 && ky==0 && kz==0) visc_meio = Visc_local;
 				
