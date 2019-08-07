@@ -478,7 +478,7 @@ PetscErrorCode solve_veloc_3d()
 	
 	PetscInt maxk = 400,k;
 	
-	ierr = KSPSolve(V_ksp,Vf_P,Veloc_fut);CHKERRQ(ierr);
+	ierr = KSPSolve(V_ksp,Vf_P,Veloc_fut);CHKERRQ(ierr); /// Solve KV0 = F
 	
 	VecPointwiseMult(Veloc_fut,Veloc_fut,Veloc_Cond); ///!!!ok ... apenas zerando nas b.c.
 	VecAXPY(Veloc_fut,1.0,Veloc_0); ///!!!ok apenas colocando os valores de Veloc_0 em Veloc nas b.c.
@@ -486,28 +486,28 @@ PetscErrorCode solve_veloc_3d()
 	//write_veloc_3d(101);
 	
 	
-	ierr = MatMultTranspose(VG,Veloc_fut,rk_vec2);CHKERRQ(ierr);
+	ierr = MatMultTranspose(VG,Veloc_fut,rk_vec2);CHKERRQ(ierr); /// r0 = G^T V0
 	
 	
-	ierr = VecPointwiseMult(zk_vec2,Precon,rk_vec2);
+	ierr = VecPointwiseMult(zk_vec2,Precon,rk_vec2); /// z0 = Precon*r0 = M^-1 *r0 <----
 	
-	ierr = VecDot(rk_vec2,rk_vec2,&denok);CHKERRQ(ierr);
+	ierr = VecDot(rk_vec2,rk_vec2,&denok);CHKERRQ(ierr); //denok = r0^2 ?
 	
 	if (rank==0) printf("denok = %lg\n",denok);
 	
 	
 	
-	for (k=1;k<maxk && denok>denok_min;k++){
-		if (k==1) VecCopy(zk_vec2,sk_vec);
+	for (k=1;k<maxk && denok>denok_min;k++){ /// while denok>denok_min ?
+		if (k==1) VecCopy(zk_vec2,sk_vec); ///if k=1: s1 = zk <----
 		else {
 			VecCopy(zk_vec2,zk_vec);
 			
-			ierr = VecPointwiseMult(zk_vec2,Precon,rk_vec2);
+			ierr = VecPointwiseMult(zk_vec2,Precon,rk_vec2); /// z_(k-1) = Precon*r_(k-1) <----
 			
 			VecDot(zk_vec2,rk_vec2,&betak);
 			VecDot(zk_vec,rk_vec,&denok);
-			betak=betak/denok;
-			VecAYPX(sk_vec,betak,zk_vec2);
+			betak=betak/denok; /// bk = (z_(k-1)*r_(k-1))/(z_(k-2)*r_(k-2)) <----
+			VecAYPX(sk_vec,betak,zk_vec2); /// sk = z_(k-1) + b*s_(k-1) <----
 		}
 		ierr = MatMult(VG,sk_vec,gs_vec);
 		
@@ -517,24 +517,24 @@ PetscErrorCode solve_veloc_3d()
 		
 		
 		
-		KSPSolve(V_ksp,gs_vec,uk_vec);
+		KSPSolve(V_ksp,gs_vec,uk_vec); /// K uk = G sk
 		VecPointwiseMult(uk_vec,uk_vec,Veloc_Cond);//!!!ok adicionado agora para zerar as condicoes de contorno
 		
 		
 		VecDot(zk_vec2,rk_vec2,&alphak);
 		VecDot(gs_vec,uk_vec,&denok);
 		
-		alphak=alphak/denok;
+		alphak=alphak/denok; /// ak = (r_(k-1) z_(k-1))/((G sk)uk) <----
 		
-		VecAXPY(Pressure,alphak,sk_vec);
+		VecAXPY(Pressure,alphak,sk_vec); /// Pk = P_(k-1) + ak*sk
 		
-		VecAXPY(Veloc_fut,-alphak,uk_vec);
+		VecAXPY(Veloc_fut,-alphak,uk_vec); /// Vk = V_(k-1) - ak*uk
 		
 		VecCopy(rk_vec2,rk_vec);
 		
 		ierr = MatMultTranspose(VG,uk_vec,rk_vec2);CHKERRQ(ierr);
 		
-		VecAYPX(rk_vec2,-alphak,rk_vec);
+		VecAYPX(rk_vec2,-alphak,rk_vec); ///rk = r_(k-1) - ak*(G uk)
 		
 		VecDot(rk_vec2,rk_vec2,&denok);
 		
