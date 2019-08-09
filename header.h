@@ -204,6 +204,8 @@ PetscReal print_visc;
 Mat VA, VB, VG;
 Vec Vf, Veloc, Veloc_fut,Veloc_weight,Veloc_0;
 
+Vec Adiag;
+
 Vec Veloc_step1, Veloc_step2;
 
 Vec Vf_P;

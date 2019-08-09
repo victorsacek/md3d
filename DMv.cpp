@@ -130,7 +130,7 @@ extern double e2_aux_MIN;
 
 extern double dz_const;
 
-
+extern Vec Adiag;
 
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
@@ -219,6 +219,8 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	ierr = DMCreateGlobalVector(da_Veloc,&sk_vec);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&gs_vec);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&uk_vec);CHKERRQ(ierr);
+	
+	ierr = DMCreateGlobalVector(da_Veloc,&Adiag);CHKERRQ(ierr);
 	
 	ierr = DMCreateGlobalVector(da_Veloc,&zk_vec);CHKERRQ(ierr);
 	ierr = DMCreateGlobalVector(da_Veloc,&zk_vec2);CHKERRQ(ierr);
@@ -480,6 +482,10 @@ PetscErrorCode solve_veloc_3d()
 	
 	ierr = KSPSolve(V_ksp,Vf_P,Veloc_fut);CHKERRQ(ierr); /// Solve KV0 = F
 	
+	PetscInt its;
+	
+	ierr = KSPGetIterationNumber(V_ksp,&its);CHKERRQ(ierr);
+	
 	VecPointwiseMult(Veloc_fut,Veloc_fut,Veloc_Cond); ///!!!ok ... apenas zerando nas b.c.
 	VecAXPY(Veloc_fut,1.0,Veloc_0); ///!!!ok apenas colocando os valores de Veloc_0 em Veloc nas b.c.
 	
@@ -493,7 +499,7 @@ PetscErrorCode solve_veloc_3d()
 	
 	ierr = VecDot(rk_vec2,rk_vec2,&denok);CHKERRQ(ierr); //denok = r0^2 ?
 	
-	if (rank==0) printf("denok = %lg\n",denok);
+	if (rank==0) printf("denok = %lg, its = %d\n",denok, its);
 	
 	
 	
@@ -520,6 +526,7 @@ PetscErrorCode solve_veloc_3d()
 		KSPSolve(V_ksp,gs_vec,uk_vec); /// K uk = G sk
 		VecPointwiseMult(uk_vec,uk_vec,Veloc_Cond);//!!!ok adicionado agora para zerar as condicoes de contorno
 		
+		ierr = KSPGetIterationNumber(V_ksp,&its);CHKERRQ(ierr);
 		
 		VecDot(zk_vec2,rk_vec2,&alphak);
 		VecDot(gs_vec,uk_vec,&denok);
@@ -538,7 +545,7 @@ PetscErrorCode solve_veloc_3d()
 		
 		VecDot(rk_vec2,rk_vec2,&denok);
 		
-		if (rank==0) printf("denok = %lg, k=%d\n",denok,k);
+		if (rank==0) printf("denok = %lg, k=%d, its = %d\n",denok,k,its);
 		
 	}
 	
@@ -762,7 +769,7 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 	double Visc_local,Temper_local,Geoq_local,e2_local,e2_cumulat,z_local;
 	double visc_meio;
 	
-	PetscErrorCode ierr=0;
+	//PetscErrorCode ierr=0;
 	
 	double kx,ky,kz;
 	

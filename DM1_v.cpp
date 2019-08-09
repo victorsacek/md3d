@@ -102,6 +102,10 @@ extern PetscReal print_visc;
 extern int tcont;
 extern long print_step;
 
+extern Vec Adiag;
+
+extern Mat VB;
+
 
 PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
@@ -365,6 +369,10 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	ierr = MatAssemblyBegin(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 	ierr = MatAssemblyEnd(A,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+	
+	MatGetDiagonal(A,Adiag);
+	VecReciprocal(Adiag);
+	MatDiagonalSet(VB,Adiag,INSERT_VALUES);
 	
 	
 	if (Verif_VG==0){
