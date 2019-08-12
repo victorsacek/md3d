@@ -93,7 +93,10 @@ int main(int argc,char **args)
 	ierr = PetscOptionsGetReal(NULL,NULL,"-denok",&denok_min,NULL);CHKERRQ(ierr);
 	
 	print_visc = 0;
-	ierr = PetscOptionsGetReal(NULL,NULL,"-print_visc",&print_visc,NULL);CHKERRQ(ierr);
+	ierr = PetscOptionsGetInt(NULL,NULL,"-print_visc",&print_visc,NULL);CHKERRQ(ierr);
+	
+	visc_const_per_element=0;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-visc_const_per_element",&visc_const_per_element,NULL);CHKERRQ(ierr);
 	
 	dx_const = Lx/(Nx-1);
 	dy_const = Ly/(Ny-1);

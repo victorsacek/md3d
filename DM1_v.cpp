@@ -97,7 +97,7 @@ extern double depth;
 
 extern PetscInt veloc_extern;
 
-extern PetscReal print_visc;
+extern PetscInt print_visc;
 
 extern int tcont;
 extern long print_step;

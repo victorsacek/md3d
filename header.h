@@ -51,6 +51,8 @@ PetscInt temper_extern;
 PetscInt veloc_extern;
 PetscInt bcv_extern;
 
+PetscInt visc_const_per_element;
+
 /////////
 
 double dx_const;
@@ -199,7 +201,7 @@ PetscReal *N_z_Gauss;
 
 PetscReal denok_min;
 
-PetscReal print_visc;
+PetscInt print_visc;
 
 Mat VA, VB, VG;
 Vec Vf, Veloc, Veloc_fut,Veloc_weight,Veloc_0;
