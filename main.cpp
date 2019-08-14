@@ -98,6 +98,9 @@ int main(int argc,char **args)
 	visc_const_per_element=0;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-visc_const_per_element",&visc_const_per_element,NULL);CHKERRQ(ierr);
 	
+	visc_harmonic_mean=1;
+	ierr = PetscOptionsGetInt(NULL,NULL,"-visc_harmonic_mean",&visc_harmonic_mean,NULL);CHKERRQ(ierr);
+	
 	dx_const = Lx/(Nx-1);
 	dy_const = Ly/(Ny-1);
 	dz_const = depth/(Nz-1);

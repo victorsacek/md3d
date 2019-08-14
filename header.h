@@ -29,6 +29,8 @@ PetscScalar *inter_n;
 PetscScalar *inter_Q;
 PetscScalar *inter_V;
 
+PetscInt visc_harmonic_mean;
+
 
 /////////
 

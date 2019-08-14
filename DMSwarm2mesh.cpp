@@ -22,6 +22,8 @@ extern double dz_const;
 
 extern double Lx, Ly, depth;
 
+extern PetscInt visc_harmonic_mean;
+
 
 PetscErrorCode Swarm2Mesh(){
 
@@ -81,98 +83,189 @@ PetscErrorCode Swarm2Mesh(){
 	ierr = DMSwarmGetField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	
-	for (p=0; p<nlocal; p++) {
-		PetscReal cx,cy,cz;
-		PetscReal rx,ry,rz,rfac;
-		PetscInt i,j,k;
-		
-		cx = array[3*p];
-		cy = array[3*p+1];
-		cz = array[3*p+2];
-		
-		i = (int)(cx/dx_const);
-		j = (int)(cy/dy_const);
-		k = (int)((cz+depth)/dz_const);
-		
-		
-		
-		if (i<0 || i>=Nx-1) {printf("estranho i=%d\n",i); exit(1);}
-		if (j<0 || j>=Ny-1) {printf("estranho j=%d\n",j); exit(1);}
-		if (k<0 || k>=Nz-1) {printf("estranho k=%d\n",k); exit(1);}
-		
-		if (i==Nx-1) i=Nx-2;
-		if (j==Ny-1) j=Ny-2;
-		if (k==Nz-1) k=Nz-2;
-		
-		rx = (cx-i*dx_const)/dx_const;
-		ry = (cy-j*dy_const)/dy_const;
-		rz = (cz-(-depth+k*dz_const))/dz_const;
-		
-		if (rx<0 || rx>1) {printf("estranho rx=%f\n",rx); exit(1);}
-		if (ry<0 || ry>1) {printf("estranho ry=%f\n",ry); exit(1);}
-		if (rz<0 || rz>1) {printf("estranho rz=%f\n",rz); exit(1);}
-		
-		
-		rfac = (1.0-rx)*(1.0-ry)*(1.0-rz);
-		qq		[k][j][i] += rfac*geoq_fac[p];
-		qq_rho	[k][j][i] += rfac*rho_fac[p];
-		qq_H	[k][j][i] += rfac*H_fac[p];
-		qq_strain[k][j][i] += rfac*strain_fac[p];
-		qq_cont	[k][j][i] += rfac;
-		
-		rfac = (rx)*(1.0-ry)*(1.0-rz);
-		qq		[k][j][i+1] += rfac*geoq_fac[p];
-		qq_rho	[k][j][i+1] += rfac*rho_fac[p];
-		qq_H	[k][j][i+1] += rfac*H_fac[p];
-		qq_strain[k][j][i+1] += rfac*strain_fac[p];
-		qq_cont	[k][j][i+1] += rfac;
-		
-		rfac = (1.0-rx)*(ry)*(1.0-rz);
-		qq		[k][j+1][i] += rfac*geoq_fac[p];
-		qq_rho	[k][j+1][i] += rfac*rho_fac[p];
-		qq_H	[k][j+1][i] += rfac*H_fac[p];
-		qq_strain[k][j+1][i] += rfac*strain_fac[p];
-		qq_cont	[k][j+1][i] += rfac;
-		
-		rfac = (rx)*(ry)*(1.0-rz);
-		qq		[k][j+1][i+1] += rfac*geoq_fac[p];
-		qq_rho	[k][j+1][i+1] += rfac*rho_fac[p];
-		qq_H	[k][j+1][i+1] += rfac*H_fac[p];
-		qq_strain[k][j+1][i+1] += rfac*strain_fac[p];
-		qq_cont	[k][j+1][i+1] += rfac;
-		
-		
-		
-		rfac = (1.0-rx)*(1.0-ry)*(rz);
-		qq		[k+1][j][i] += rfac*geoq_fac[p];
-		qq_rho	[k+1][j][i] += rfac*rho_fac[p];
-		qq_H	[k+1][j][i] += rfac*H_fac[p];
-		qq_strain[k+1][j][i] += rfac*strain_fac[p];
-		qq_cont	[k+1][j][i] += rfac;
-		
-		rfac = (rx)*(1.0-ry)*(rz);
-		qq		[k+1][j][i+1] += rfac*geoq_fac[p];
-		qq_rho	[k+1][j][i+1] += rfac*rho_fac[p];
-		qq_H	[k+1][j][i+1] += rfac*H_fac[p];
-		qq_strain[k+1][j][i+1] += rfac*strain_fac[p];
-		qq_cont	[k+1][j][i+1] += rfac;
-		
-		rfac = (1.0-rx)*(ry)*(rz);
-		qq		[k+1][j+1][i] += rfac*geoq_fac[p];
-		qq_rho	[k+1][j+1][i] += rfac*rho_fac[p];
-		qq_H	[k+1][j+1][i] += rfac*H_fac[p];
-		qq_strain[k+1][j+1][i] += rfac*strain_fac[p];
-		qq_cont	[k+1][j+1][i] += rfac;
-		
-		rfac = (rx)*(ry)*(rz);
-		qq		[k+1][j+1][i+1] += rfac*geoq_fac[p];
-		qq_rho	[k+1][j+1][i+1] += rfac*rho_fac[p];
-		qq_H	[k+1][j+1][i+1] += rfac*H_fac[p];
-		qq_strain[k+1][j+1][i+1] += rfac*strain_fac[p];
-		qq_cont	[k+1][j+1][i+1] += rfac;
-
-		
-		
+	if (visc_harmonic_mean==1){
+		for (p=0; p<nlocal; p++) {
+			PetscReal cx,cy,cz;
+			PetscReal rx,ry,rz,rfac;
+			PetscInt i,j,k;
+			
+			cx = array[3*p];
+			cy = array[3*p+1];
+			cz = array[3*p+2];
+			
+			i = (int)(cx/dx_const);
+			j = (int)(cy/dy_const);
+			k = (int)((cz+depth)/dz_const);
+			
+			
+			
+			if (i<0 || i>=Nx-1) {printf("estranho i=%d\n",i); exit(1);}
+			if (j<0 || j>=Ny-1) {printf("estranho j=%d\n",j); exit(1);}
+			if (k<0 || k>=Nz-1) {printf("estranho k=%d\n",k); exit(1);}
+			
+			if (i==Nx-1) i=Nx-2;
+			if (j==Ny-1) j=Ny-2;
+			if (k==Nz-1) k=Nz-2;
+			
+			rx = (cx-i*dx_const)/dx_const;
+			ry = (cy-j*dy_const)/dy_const;
+			rz = (cz-(-depth+k*dz_const))/dz_const;
+			
+			if (rx<0 || rx>1) {printf("estranho rx=%f\n",rx); exit(1);}
+			if (ry<0 || ry>1) {printf("estranho ry=%f\n",ry); exit(1);}
+			if (rz<0 || rz>1) {printf("estranho rz=%f\n",rz); exit(1);}
+			
+			
+			rfac = (1.0-rx)*(1.0-ry)*(1.0-rz);
+			qq		[k][j][i] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k][j][i] += rfac*rho_fac[p];
+			qq_H	[k][j][i] += rfac*H_fac[p];
+			qq_strain[k][j][i] += rfac*strain_fac[p];
+			qq_cont	[k][j][i] += rfac;
+			
+			rfac = (rx)*(1.0-ry)*(1.0-rz);
+			qq		[k][j][i+1] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k][j][i+1] += rfac*rho_fac[p];
+			qq_H	[k][j][i+1] += rfac*H_fac[p];
+			qq_strain[k][j][i+1] += rfac*strain_fac[p];
+			qq_cont	[k][j][i+1] += rfac;
+			
+			rfac = (1.0-rx)*(ry)*(1.0-rz);
+			qq		[k][j+1][i] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k][j+1][i] += rfac*rho_fac[p];
+			qq_H	[k][j+1][i] += rfac*H_fac[p];
+			qq_strain[k][j+1][i] += rfac*strain_fac[p];
+			qq_cont	[k][j+1][i] += rfac;
+			
+			rfac = (rx)*(ry)*(1.0-rz);
+			qq		[k][j+1][i+1] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k][j+1][i+1] += rfac*rho_fac[p];
+			qq_H	[k][j+1][i+1] += rfac*H_fac[p];
+			qq_strain[k][j+1][i+1] += rfac*strain_fac[p];
+			qq_cont	[k][j+1][i+1] += rfac;
+			
+			
+			
+			rfac = (1.0-rx)*(1.0-ry)*(rz);
+			qq		[k+1][j][i] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k+1][j][i] += rfac*rho_fac[p];
+			qq_H	[k+1][j][i] += rfac*H_fac[p];
+			qq_strain[k+1][j][i] += rfac*strain_fac[p];
+			qq_cont	[k+1][j][i] += rfac;
+			
+			rfac = (rx)*(1.0-ry)*(rz);
+			qq		[k+1][j][i+1] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k+1][j][i+1] += rfac*rho_fac[p];
+			qq_H	[k+1][j][i+1] += rfac*H_fac[p];
+			qq_strain[k+1][j][i+1] += rfac*strain_fac[p];
+			qq_cont	[k+1][j][i+1] += rfac;
+			
+			rfac = (1.0-rx)*(ry)*(rz);
+			qq		[k+1][j+1][i] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k+1][j+1][i] += rfac*rho_fac[p];
+			qq_H	[k+1][j+1][i] += rfac*H_fac[p];
+			qq_strain[k+1][j+1][i] += rfac*strain_fac[p];
+			qq_cont	[k+1][j+1][i] += rfac;
+			
+			rfac = (rx)*(ry)*(rz);
+			qq		[k+1][j+1][i+1] += rfac/geoq_fac[p]; //<--- harmonic
+			qq_rho	[k+1][j+1][i+1] += rfac*rho_fac[p];
+			qq_H	[k+1][j+1][i+1] += rfac*H_fac[p];
+			qq_strain[k+1][j+1][i+1] += rfac*strain_fac[p];
+			qq_cont	[k+1][j+1][i+1] += rfac;
+		}
+	}
+	else{
+		for (p=0; p<nlocal; p++) {
+			PetscReal cx,cy,cz;
+			PetscReal rx,ry,rz,rfac;
+			PetscInt i,j,k;
+			
+			cx = array[3*p];
+			cy = array[3*p+1];
+			cz = array[3*p+2];
+			
+			i = (int)(cx/dx_const);
+			j = (int)(cy/dy_const);
+			k = (int)((cz+depth)/dz_const);
+			
+			
+			
+			if (i<0 || i>=Nx-1) {printf("estranho i=%d\n",i); exit(1);}
+			if (j<0 || j>=Ny-1) {printf("estranho j=%d\n",j); exit(1);}
+			if (k<0 || k>=Nz-1) {printf("estranho k=%d\n",k); exit(1);}
+			
+			if (i==Nx-1) i=Nx-2;
+			if (j==Ny-1) j=Ny-2;
+			if (k==Nz-1) k=Nz-2;
+			
+			rx = (cx-i*dx_const)/dx_const;
+			ry = (cy-j*dy_const)/dy_const;
+			rz = (cz-(-depth+k*dz_const))/dz_const;
+			
+			if (rx<0 || rx>1) {printf("estranho rx=%f\n",rx); exit(1);}
+			if (ry<0 || ry>1) {printf("estranho ry=%f\n",ry); exit(1);}
+			if (rz<0 || rz>1) {printf("estranho rz=%f\n",rz); exit(1);}
+			
+			
+			rfac = (1.0-rx)*(1.0-ry)*(1.0-rz);
+			qq		[k][j][i] += rfac*geoq_fac[p];
+			qq_rho	[k][j][i] += rfac*rho_fac[p];
+			qq_H	[k][j][i] += rfac*H_fac[p];
+			qq_strain[k][j][i] += rfac*strain_fac[p];
+			qq_cont	[k][j][i] += rfac;
+			
+			rfac = (rx)*(1.0-ry)*(1.0-rz);
+			qq		[k][j][i+1] += rfac*geoq_fac[p];
+			qq_rho	[k][j][i+1] += rfac*rho_fac[p];
+			qq_H	[k][j][i+1] += rfac*H_fac[p];
+			qq_strain[k][j][i+1] += rfac*strain_fac[p];
+			qq_cont	[k][j][i+1] += rfac;
+			
+			rfac = (1.0-rx)*(ry)*(1.0-rz);
+			qq		[k][j+1][i] += rfac*geoq_fac[p];
+			qq_rho	[k][j+1][i] += rfac*rho_fac[p];
+			qq_H	[k][j+1][i] += rfac*H_fac[p];
+			qq_strain[k][j+1][i] += rfac*strain_fac[p];
+			qq_cont	[k][j+1][i] += rfac;
+			
+			rfac = (rx)*(ry)*(1.0-rz);
+			qq		[k][j+1][i+1] += rfac*geoq_fac[p];
+			qq_rho	[k][j+1][i+1] += rfac*rho_fac[p];
+			qq_H	[k][j+1][i+1] += rfac*H_fac[p];
+			qq_strain[k][j+1][i+1] += rfac*strain_fac[p];
+			qq_cont	[k][j+1][i+1] += rfac;
+			
+			
+			
+			rfac = (1.0-rx)*(1.0-ry)*(rz);
+			qq		[k+1][j][i] += rfac*geoq_fac[p];
+			qq_rho	[k+1][j][i] += rfac*rho_fac[p];
+			qq_H	[k+1][j][i] += rfac*H_fac[p];
+			qq_strain[k+1][j][i] += rfac*strain_fac[p];
+			qq_cont	[k+1][j][i] += rfac;
+			
+			rfac = (rx)*(1.0-ry)*(rz);
+			qq		[k+1][j][i+1] += rfac*geoq_fac[p];
+			qq_rho	[k+1][j][i+1] += rfac*rho_fac[p];
+			qq_H	[k+1][j][i+1] += rfac*H_fac[p];
+			qq_strain[k+1][j][i+1] += rfac*strain_fac[p];
+			qq_cont	[k+1][j][i+1] += rfac;
+			
+			rfac = (1.0-rx)*(ry)*(rz);
+			qq		[k+1][j+1][i] += rfac*geoq_fac[p];
+			qq_rho	[k+1][j+1][i] += rfac*rho_fac[p];
+			qq_H	[k+1][j+1][i] += rfac*H_fac[p];
+			qq_strain[k+1][j+1][i] += rfac*strain_fac[p];
+			qq_cont	[k+1][j+1][i] += rfac;
+			
+			rfac = (rx)*(ry)*(rz);
+			qq		[k+1][j+1][i+1] += rfac*geoq_fac[p];
+			qq_rho	[k+1][j+1][i+1] += rfac*rho_fac[p];
+			qq_H	[k+1][j+1][i+1] += rfac*H_fac[p];
+			qq_strain[k+1][j+1][i+1] += rfac*strain_fac[p];
+			qq_cont	[k+1][j+1][i+1] += rfac;
+		}
 	}
 	
 	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
@@ -203,6 +296,8 @@ PetscErrorCode Swarm2Mesh(){
 	
 	//VecPointwiseMax(geoq_cont,geoq_cont,geoqOnes);
 	VecPointwiseDivide(geoq,geoq,geoq_cont);
+	if (visc_harmonic_mean==1) VecReciprocal(geoq); //<--- harmonic
+		
 	VecPointwiseDivide(geoq_rho,geoq_rho,geoq_cont);
 	VecPointwiseDivide(geoq_H,geoq_H,geoq_cont);
 	VecPointwiseDivide(geoq_strain,geoq_strain,geoq_cont);
