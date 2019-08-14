@@ -30,7 +30,7 @@ PetscErrorCode createSwarm();
 PetscErrorCode moveSwarm(PetscReal dt);
 PetscErrorCode Swarm_add_remove();
 PetscErrorCode SwarmViewGP(DM dms,const char prefix[]);
-PetscErrorCode Swarm2Mesh();
+
 
 
 PetscErrorCode reader(int rank);
@@ -114,7 +114,6 @@ int main(int argc,char **args)
 	if (geoq_on){
 		PetscPrintf(PETSC_COMM_WORLD,"Swarm INICIO\n");
 		ierr = createSwarm();CHKERRQ(ierr);
-		ierr = Swarm2Mesh();
 		PetscPrintf(PETSC_COMM_WORLD,"Swarm FIM\n");
 	}
 	
@@ -162,7 +161,6 @@ int main(int argc,char **args)
 				ierr = moveSwarm(dt_calor_sec/max_cont);
 			}
 			Swarm_add_remove();
-			ierr = Swarm2Mesh();
 			//exit(1);
 		}
 		

@@ -5,9 +5,7 @@
 
 PetscErrorCode DMDAGetElementCorners(DM da,PetscInt *sx,PetscInt *sy,PetscInt *sz,PetscInt *mx,PetscInt *my,PetscInt *mz);
 
-PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
-									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele,
-									PetscReal z_base);
+PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal *geoq_ele);
 
 PetscErrorCode write_veloc_3d(int cont);
 PetscErrorCode write_veloc_cond(int cont);
@@ -174,14 +172,6 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	
 
-	PetscScalar             ***tt;
-	
-	ierr = VecZeroEntries(local_Temper);CHKERRQ(ierr);
-	
-	ierr = DMGlobalToLocalBegin(temper_da,Temper,INSERT_VALUES,local_Temper);
-	ierr = DMGlobalToLocalEnd(  temper_da,Temper,INSERT_VALUES,local_Temper);
-	
-	ierr = DMDAVecGetArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	
 	
 	
@@ -195,30 +185,14 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	ierr = DMDAVecGetArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
 	
 	
-	PetscScalar             ***qq_strain;
 	
-	ierr = VecZeroEntries(local_geoq_strain);CHKERRQ(ierr);
-	
-	ierr = DMGlobalToLocalBegin(temper_da,geoq_strain,INSERT_VALUES,local_geoq_strain);
-	ierr = DMGlobalToLocalEnd(  temper_da,geoq_strain,INSERT_VALUES,local_geoq_strain);
-	
-	ierr = DMDAVecGetArray(temper_da,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
-	
-	Stokes					***VV;
-	
-	ierr = VecZeroEntries(local_V);CHKERRQ(ierr);
-	
-	ierr = DMGlobalToLocalBegin(veloc_da,Veloc_fut,INSERT_VALUES,local_V);
-	ierr = DMGlobalToLocalEnd(  veloc_da,Veloc_fut,INSERT_VALUES,local_V);
-	
-	ierr = DMDAVecGetArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
 	
 	
 	
 	PetscReal volume = dx_const*dy_const*dz_const;
 	
 	
-	PetscReal temper_ele[T_NE],geoq_ele[T_NE],e2_ele[T_NE],VX_ele[T_NE],VY_ele[T_NE],VZ_ele[T_NE];
+	PetscReal geoq_ele[T_NE];
 	
 	visc_aux_MAX = 1.0E5;
 	visc_aux_MIN = 1.0E50;
@@ -226,7 +200,6 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	e2_aux_MAX = 0.0;
 	e2_aux_MIN = 1.0E50;
 	
-	PetscReal z_base;
 	
 	FILE *sai_visc;
 	
@@ -260,18 +233,10 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 				indr[6].i=ei  ; indr[6].j=ej+1; indr[6].k=ek+1;
 				indr[7].i=ei+1; indr[7].j=ej+1; indr[7].k=ek+1;
 				
-				for (i=0;i<T_NE;i++) temper_ele[i]=tt[indr[i].k][indr[i].j][indr[i].i];
 				for (i=0;i<T_NE;i++) geoq_ele[i]=qq[indr[i].k][indr[i].j][indr[i].i];
-				for (i=0;i<T_NE;i++) e2_ele[i]=qq_strain[indr[i].k][indr[i].j][indr[i].i];
-				
-				for (i=0;i<T_NE;i++) VX_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].u;
-				for (i=0;i<T_NE;i++) VY_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].v;
-				for (i=0;i<T_NE;i++) VZ_ele[i]=VV[indr[i].k][indr[i].j][indr[i].i].w;
-				
-				z_base = -depth + ek*dz_const;///!!!!
 				
 				
-				visc_meio = montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,temper_ele,geoq_ele,e2_ele,VX_ele,VY_ele,VZ_ele,z_base);
+				visc_meio = montaKeVeloc_simplif(Ke_veloc,Ke_veloc_general,geoq_ele);
 				
 				if (print_visc==1 && tcont%print_step==0) {
 					fprintf(sai_visc,"%d %d %d %lg\n",ei,ej,ek,visc_meio);
@@ -382,7 +347,7 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 		Verif_VG=1;
 	}
 	
-	ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
+	//ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
 	
 	ierr = DMDAVecRestoreArray(veloc_da,local_Precon,&pc);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(veloc_da,local_Precon,ADD_VALUES,Precon);CHKERRQ(ierr);
@@ -391,9 +356,9 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 	
 	
 	ierr = DMDAVecRestoreArray(veloc_da,local_VC,&VVC);
-	ierr = DMDAVecRestoreArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
+	//ierr = DMDAVecRestoreArray(temper_da,local_Temper,&tt);CHKERRQ(ierr);
 	ierr = DMDAVecRestoreArray(temper_da,local_geoq,&qq);CHKERRQ(ierr);
-	ierr = DMDAVecRestoreArray(temper_da,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
+	//ierr = DMDAVecRestoreArray(temper_da,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
 	
 	printf("Visc_min = %lg, Visc_max = %lg\n",visc_aux_MIN,visc_aux_MAX);
 	

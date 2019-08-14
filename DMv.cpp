@@ -36,9 +36,7 @@ PetscErrorCode AssembleF_Veloc(Vec F,DM veloc_da,DM drho_da, Vec FP);
 
 PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_const, double dz_const);
 
-PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
-									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele,
-									PetscReal z_base);
+PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal *geoq_ele);
 
 PetscErrorCode montaCeVeloc(PetscReal *Ce);
 
@@ -52,7 +50,9 @@ PetscErrorCode write_veloc_cond(int cont);
 
 PetscErrorCode Init_Veloc();
 
-double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,double strain_cumulate);
+
+PetscErrorCode moveSwarm(PetscReal dt);
+PetscErrorCode Swarm2Mesh();
 
 extern double r06;
 extern double r8p9;
@@ -427,6 +427,9 @@ PetscErrorCode build_veloc_3d()
 	
 	ierr = VecZeroEntries(Precon);CHKERRQ(ierr);
 	
+	ierr = moveSwarm(0.0);
+	ierr = Swarm2Mesh();
+	
 	if (rank==0) printf("build VA,Vf\n");
 	ierr = AssembleA_Veloc(VA,VG,da_Veloc,da_Thermal);CHKERRQ(ierr);
 	if (rank==0) printf("t\n");
@@ -762,13 +765,11 @@ PetscErrorCode montaKeVeloc_general(PetscReal *KeG, double dx_const, double dy_c
 
 
 
-PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_ele, PetscReal *geoq_ele,
-									PetscReal *e2_ele, PetscReal *VX_ele, PetscReal *VY_ele, PetscReal *VZ_ele,
-									PetscReal z_base){
+PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG, PetscReal *geoq_ele){
 	
 	long i,j;
 	
-	double Visc_local,Temper_local,Geoq_local,e2_local,e2_cumulat,z_local;
+	double Visc_local,Geoq_local;
 	double visc_meio;
 	
 	//PetscErrorCode ierr=0;
@@ -792,9 +793,9 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 	
 	double Hx,Hy,Hz,prodH;
 	
-	long point=0,cont_p=0;
+	long point=0;//,cont_p=0;
 	
-	PetscReal strain[6];
+	//PetscReal strain[6];
 	
 	for (i=0;i<V_GT*V_GT;i++) Ke[i]=0.0;
 	
@@ -810,25 +811,25 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					if (kx==0) Hx=r8p9;
 					else Hx=r5p9;
 					
-					Temper_local = 0.0;
+					//Temper_local = 0.0;
 					Geoq_local = 0.0;
-					e2_local = 0.0;
-					e2_cumulat = 0.0;
+					//e2_local = 0.0;
+					//e2_cumulat = 0.0;
 					
 					prodH = Hx*Hy*Hz;
 					cont=0;
 					for (ez=-1.;ez<=1.;ez+=2.){
 						for (ey=-1.;ey<=1.;ey+=2.){
 							for (ex=-1.;ex<=1.;ex+=2.){
-								Temper_local+=Temper_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
+								//Temper_local+=Temper_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
 								Geoq_local+=geoq_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
-								e2_cumulat+=e2_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
+								//e2_cumulat+=e2_ele[cont]*(1+ex*kx)*(1+ey*ky)*(1+ez*kz)/8.0;
 								cont++;
 							}
 						}
 					}
 					
-					
+					/*
 					cont=0;
 					
 					for (i=0;i<6;i++) strain[i]=0.0;
@@ -848,10 +849,6 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					}
 					cont_p++;
 					
-					/*for (i=0;i<6;i++){
-						PetscPrintf(PETSC_COMM_WORLD,"strain %lg\n",strain[i]);
-					}
-					exit(1);*/
 					
 					e2_local = (strain[0]-strain[1])*(strain[0]-strain[1]);
 					e2_local+= (strain[1]-strain[2])*(strain[1]-strain[2]);
@@ -865,9 +862,9 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					
 					//if (e2_local>0) printf("e2_local > 0\n");
 					
-					z_local = z_base + dz_const*(kz+1.0)/2.0;
+					z_local = z_base + dz_const*(kz+1.0)/2.0;*/
 					
-					Visc_local = calc_visco_ponto(Temper_local,z_local,Geoq_local,e2_local,e2_cumulat);
+					Visc_local = Geoq_local;
 					
 					if (kx==0 && ky==0 && kz==0) visc_meio = Visc_local;
 					
@@ -875,8 +872,8 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					if (Visc_local<visc_aux_MIN) visc_aux_MIN=Visc_local;
 					if (Visc_local>visc_aux_MAX) visc_aux_MAX=Visc_local;
 					
-					if (e2_local<e2_aux_MIN) e2_aux_MIN=e2_local;
-					if (e2_local>e2_aux_MAX) e2_aux_MAX=e2_local;
+					//if (e2_local<e2_aux_MIN) e2_aux_MIN=e2_local;
+					//if (e2_local>e2_aux_MAX) e2_aux_MAX=e2_local;
 					
 					for (i=0;i<V_GT;i++){
 						for (j=0;j<V_GT;j++){
@@ -903,9 +900,9 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					if (kx==0) Hx=r8p9;
 					else Hx=r5p9;
 					
-					Temper_local = 0.0;
+					//Temper_local = 0.0;
 					Geoq_local = 0.0;
-					e2_local = 0.0;
+					/*e2_local = 0.0;
 					e2_cumulat = 0.0;
 					
 					prodH = Hx*Hy*Hz;
@@ -941,10 +938,6 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					}
 					cont_p++;
 					
-					/*for (i=0;i<6;i++){
-					 PetscPrintf(PETSC_COMM_WORLD,"strain %lg\n",strain[i]);
-					 }
-					 exit(1);*/
 					
 					e2_local = (strain[0]-strain[1])*(strain[0]-strain[1]);
 					e2_local+= (strain[1]-strain[2])*(strain[1]-strain[2]);
@@ -958,9 +951,9 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					
 					//if (e2_local>0) printf("e2_local > 0\n");
 					
-					z_local = z_base + dz_const*(kz+1.0)/2.0;
+					z_local = z_base + dz_const*(kz+1.0)/2.0;*/
 					
-					Visc_local = calc_visco_ponto(Temper_local,z_local,Geoq_local,e2_local,e2_cumulat);
+					Visc_local = Geoq_local;
 					
 					Visc_mean+=Visc_local;
 					cont_points_lagran++;
@@ -971,8 +964,8 @@ PetscReal montaKeVeloc_simplif(PetscReal *Ke,PetscReal *KeG,PetscReal *Temper_el
 					if (Visc_local<visc_aux_MIN) visc_aux_MIN=Visc_local;
 					if (Visc_local>visc_aux_MAX) visc_aux_MAX=Visc_local;
 					
-					if (e2_local<e2_aux_MIN) e2_aux_MIN=e2_local;
-					if (e2_local>e2_aux_MAX) e2_aux_MAX=e2_local;
+					//if (e2_local<e2_aux_MIN) e2_aux_MIN=e2_local;
+					//if (e2_local>e2_aux_MAX) e2_aux_MAX=e2_local;
 					
 					for (i=0;i<V_GT;i++){
 						for (j=0;j<V_GT;j++){

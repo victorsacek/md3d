@@ -24,6 +24,11 @@ PetscScalar *inter_rho;
 PetscScalar *inter_geoq;
 PetscScalar *inter_H;
 
+PetscScalar *inter_A;
+PetscScalar *inter_n;
+PetscScalar *inter_Q;
+PetscScalar *inter_V;
+
 
 /////////
 
@@ -275,6 +280,7 @@ PetscReal *p_add_r;
 PetscReal *p_add_r_rho;
 PetscReal *p_add_r_H;
 PetscInt *p_add_i;
+PetscInt *p_add_layer;
 PetscReal *p_add_r_strain;
 
 

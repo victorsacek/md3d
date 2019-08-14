@@ -44,6 +44,11 @@ extern PetscScalar *inter_rho;
 extern PetscScalar *inter_geoq;
 extern PetscScalar *inter_H;
 
+extern PetscScalar *inter_A;
+extern PetscScalar *inter_n;
+extern PetscScalar *inter_Q;
+extern PetscScalar *inter_V;
+
 extern double H_per_mass;
 extern double c_heat_capacity;
 
@@ -383,8 +388,17 @@ PetscErrorCode reader(int rank){
 		PetscCalloc1(n_interfaces+1,&inter_rho);
 		PetscCalloc1(n_interfaces+1,&inter_H);
 		
+		PetscCalloc1(n_interfaces+1,&inter_A);
+		PetscCalloc1(n_interfaces+1,&inter_n);
+		PetscCalloc1(n_interfaces+1,&inter_Q);
+		PetscCalloc1(n_interfaces+1,&inter_V);
+		
 		FILE *f_inter;
-		f_inter = fopen("interfaces.txt","r");
+		f_inter = fopen("interfaces_creep.txt","r");
+		if (f_inter==NULL) {
+			printf("\n\n\n\ninterfaces_creep.txt not found\n\n\n\n");
+			PetscFunctionReturn(-1);
+		}
 		if (rank==0){
 			
 			for (PetscInt i=0;i<n_interfaces+1;i++)
@@ -396,17 +410,56 @@ PetscErrorCode reader(int rank){
 			for (PetscInt i=0;i<n_interfaces+1;i++)
 				fscanf(f_inter,"%lf",&inter_H[i]);
 			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_A[i]);
+			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_n[i]);
+			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_Q[i]);
+			
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				fscanf(f_inter,"%lf",&inter_V[i]);
+			
 			for (PetscInt i=0; i<Nx*Ny; i++){
 				for (PetscInt j=0; j<n_interfaces; j++){
 					fscanf(f_inter,"%lf",&interfaces[j*Nx*Ny+i]);
 				}
 			}
+			
+			printf("\nGeoq: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%e ",inter_geoq[i]);
+			printf("\nRho: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%e",inter_rho[i]);
+			printf("\nH: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%e ",inter_H[i]);
+			printf("\nA: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%e ",inter_A[i]);
+			printf("\nn: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%lf ",inter_n[i]);
+			printf("\nQ: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%e ",inter_Q[i]);
+			printf("\nV: ");
+			for (PetscInt i=0;i<n_interfaces+1;i++)
+				printf("%e ",inter_V[i]);
 		}
 		
 		MPI_Bcast(interfaces,Nx*Ny*n_interfaces,MPIU_SCALAR,0,PETSC_COMM_WORLD);
 		MPI_Bcast(inter_geoq,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
 		MPI_Bcast(inter_rho,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
 		MPI_Bcast(inter_H,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		
+		MPI_Bcast(inter_A,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		MPI_Bcast(inter_n,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		MPI_Bcast(inter_Q,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
+		MPI_Bcast(inter_V,n_interfaces+1,MPIU_SCALAR,0,PETSC_COMM_WORLD);
 		
 	}
 	

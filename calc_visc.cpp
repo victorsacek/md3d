@@ -1,5 +1,5 @@
 #include <petscksp.h>
-//#include <stdio.h>
+#include <stdio.h>
 #include <petscmath.h>
 
 extern int rheol;
@@ -34,9 +34,13 @@ double strain_softening(double strain, double f1, double f2){
 
 
 
-double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,double strain_cumulate){
+double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,double strain_cumulate,
+						double A, double n_exp, double QE, double VE){
 	
 	double visco_real;
+	
+	if (e2_inva<1.0E-18) e2_inva=1.0E-18; ///!!!! e2_inva min
+	
 	
 	if (rheol==0)	visco_real = visco_r;
 	
@@ -100,7 +104,7 @@ double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,doubl
 	}
 	
 	if (rheol==6){
-		double R = 8.31;     // J/mol/K
+		double R = 8.3144;     // J/mol/K
 		double E = 240000.0; // J/mol
 		
 		double b = 1.0E7;
@@ -115,11 +119,35 @@ double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,doubl
 	}
 	
 	if (rheol==7){
+		double R = 8.3144;
+		double TK = T+273.0;
 		
+		//double aux = -(T+273);
+		visco_real = visco_r*A*exp(-(QE+VE*10.0*3300.*(-z))/(R*TK));
+	}
+	
+	if (rheol==8){
+		
+		double TK = T+273.0;
+		
+		visco_real = visco_r*exp(-QE*TK + VE*(-z));
+	}
+	
+	if (WITH_NON_LINEAR==1){
+		if (rheol==9){
+			double R = 8.3144;
+			
+			double TK = T+273.;
+			
+			
+			
+			visco_real = pow(A,-1./n_exp)*pow(e2_inva,(1.-n_exp)/(2*n_exp))*exp((QE+VE*10.0*3300.*(-z))/(n_exp*R*TK));
+			//printf("%e %e %.1f %e %e %e\n",A,e2_inva,n_exp,QE,VE,visco_real);
+		}
 	}
 	
 	
-	if (rheol>6){
+	if (rheol>9){
 		printf("rheol error: larger than maximum available option\n");
 		exit(1);
 	}
