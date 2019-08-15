@@ -1,6 +1,8 @@
 
 #include <petscksp.h>
 
+void ErrorInterfaces();
+
 
 extern long Nx,Ny,Nz;
 extern long layers;
@@ -85,6 +87,8 @@ extern PetscInt WITH_NON_LINEAR;
 extern PetscInt WITH_ADIABATIC_H;
 extern PetscInt WITH_RADIOGENIC_H;
 
+char str[100];
+
 PetscErrorCode reader(int rank){
 	if (rank==0){
 		FILE *f_parametros;
@@ -96,7 +100,7 @@ PetscErrorCode reader(int rank){
 		
 		layers=Nz;
 		
-		char str[100];
+		
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"mg") == 0) fscanf(f_parametros,"%d",&ContMult);
 		else {printf("mg error\n"); exit(1);}
@@ -401,26 +405,52 @@ PetscErrorCode reader(int rank){
 		}
 		if (rank==0){
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_geoq[i]);
+			int check_fscanf;
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_rho[i]);
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"C") == 0){
+				for (PetscInt i=0;i<n_interfaces+1;i++){
+					check_fscanf = fscanf(f_inter,"%lf",&inter_geoq[i]);
+					if (check_fscanf==0) {ErrorInterfaces(); exit(1);}
+				}
+			}
+			else { ErrorInterfaces(); exit(1);}
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_H[i]);
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"rho") == 0)
+				for (PetscInt i=0;i<n_interfaces+1;i++)
+					fscanf(f_inter,"%lf",&inter_rho[i]);
+			else { ErrorInterfaces(); exit(1);}
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_A[i]);
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"H") == 0)
+				for (PetscInt i=0;i<n_interfaces+1;i++)
+					fscanf(f_inter,"%lf",&inter_H[i]);
+			else { ErrorInterfaces(); exit(1);}
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_n[i]);
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"A") == 0)
+				for (PetscInt i=0;i<n_interfaces+1;i++)
+					fscanf(f_inter,"%lf",&inter_A[i]);
+			else { ErrorInterfaces(); exit(1);}
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_Q[i]);
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"n") == 0)
+				for (PetscInt i=0;i<n_interfaces+1;i++)
+					fscanf(f_inter,"%lf",&inter_n[i]);
+			else { ErrorInterfaces(); exit(1);}
 			
-			for (PetscInt i=0;i<n_interfaces+1;i++)
-				fscanf(f_inter,"%lf",&inter_V[i]);
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"Q") == 0)
+				for (PetscInt i=0;i<n_interfaces+1;i++)
+					fscanf(f_inter,"%lf",&inter_Q[i]);
+			else { ErrorInterfaces(); exit(1);}
+			
+			fscanf(f_inter,"%s",str);
+			if (strcmp (str,"V") == 0)
+				for (PetscInt i=0;i<n_interfaces+1;i++)
+					fscanf(f_inter,"%lf",&inter_V[i]);
+			else { ErrorInterfaces(); exit(1);}
 			
 			for (PetscInt i=0; i<Nx*Ny; i++){
 				for (PetscInt j=0; j<n_interfaces; j++){
@@ -449,6 +479,7 @@ PetscErrorCode reader(int rank){
 			printf("\nV: ");
 			for (PetscInt i=0;i<n_interfaces+1;i++)
 				printf("%e ",inter_V[i]);
+			printf("\n\n");
 		}
 		
 		MPI_Bcast(interfaces,Nx*Ny*n_interfaces,MPIU_SCALAR,0,PETSC_COMM_WORLD);
@@ -465,4 +496,12 @@ PetscErrorCode reader(int rank){
 	
 	PetscFunctionReturn(0);
 
+}
+
+void ErrorInterfaces(){
+	printf("\n\n\n\n");
+	printf("Problem to read interfaces_creep.txt:\n");
+	printf("Check if the number of interfaces is\n");
+	printf("compatible to the one indicated in the\n");
+	printf("parameters file.\n\n\n\n");
 }
