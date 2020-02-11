@@ -22,6 +22,8 @@ PetscErrorCode destroy_thermal_3d();
 
 PetscErrorCode write_thermal_3d(int cont);
 
+PetscErrorCode write_pressure(int cont);
+
 PetscErrorCode write_geoq_3d(int cont);
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz);
@@ -130,6 +132,7 @@ int main(int argc,char **args)
 	ierr = write_veloc_3d(tcont);
 	ierr = write_veloc_cond(tcont);
 	ierr = write_thermal_3d(tcont);
+	ierr = write_pressure(tcont);
 	ierr = write_geoq_3d(tcont);
 	ierr = write_tempo(tcont);
 	
@@ -172,6 +175,7 @@ int main(int argc,char **args)
 			ierr = write_geoq_3d(tcont);
 			ierr = write_veloc_3d(tcont);
 			ierr = write_tempo(tcont);
+			ierr = write_pressure(tcont);
 			PetscSNPrintf(prefix,PETSC_MAX_PATH_LEN-1,"step_%d",tcont);
 			if (geoq_on){
 				ierr = SwarmViewGP(dms,prefix);CHKERRQ(ierr);

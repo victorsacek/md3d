@@ -221,6 +221,8 @@ Vec Vf_P;
 
 Vec Pressure;
 
+int PRESSURE_INIT=0;
+
 DM da_Veloc;
 
 KSP V_ksp;
