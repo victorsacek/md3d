@@ -80,6 +80,8 @@ double visc_MAX;
 double visc_MIN;
 
 
+double visc_MAX_comp;
+double visc_MIN_comp;
 double visc_aux_MAX;
 double visc_aux_MIN;
 
