@@ -302,3 +302,5 @@ PetscInt WITH_ADIABATIC_H = 0;     // Controla a adição do calor adiabático
 PetscInt WITH_RADIOGENIC_H = 0;    // Controla a adição do calor radiogênico
 
 PetscInt direct_solver = 1; // 1=direct, 0=iterative
+
+PetscInt free_surface_stab = 1; // 1=True, 0=False
