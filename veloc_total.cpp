@@ -12,6 +12,8 @@ extern Vec Veloc_step2;
 
 extern PetscInt WITH_NON_LINEAR;
 
+extern PetscReal Xi_min;
+
 
 PetscErrorCode veloc_total()
 {
@@ -37,7 +39,7 @@ PetscErrorCode veloc_total()
 		
 		PetscReal Xi=50000.0;
 		
-		for (int step=0; step<700 && Xi>1.0E-14; step++){
+		for (int step=0; step<700 && Xi>Xi_min; step++){
 			
 			ierr = build_veloc_3d();CHKERRQ(ierr);
 			

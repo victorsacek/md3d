@@ -48,6 +48,8 @@ PetscErrorCode write_tempo(int cont);
 
 PetscErrorCode veloc_total();
 
+PetscErrorCode calc_drho();
+
 
 
 
@@ -93,9 +95,14 @@ int main(int argc,char **args)
 	
 	denok_min = 1.0E-4;
 	ierr = PetscOptionsGetReal(NULL,NULL,"-denok",&denok_min,NULL);CHKERRQ(ierr);
+
+	Xi_min = 1.0E-14;
+	ierr = PetscOptionsGetReal(NULL,NULL,"-xi_min",&Xi_min,NULL);CHKERRQ(ierr);
 	
 	print_visc = 0;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-print_visc",&print_visc,NULL);CHKERRQ(ierr);
+
+	ierr = PetscOptionsGetInt(NULL,NULL,"-particles_per_ele",&particles_per_ele,NULL);CHKERRQ(ierr);
 	
 	visc_const_per_element=0;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-visc_const_per_element",&visc_const_per_element,NULL);CHKERRQ(ierr);
@@ -122,7 +129,7 @@ int main(int argc,char **args)
 		PetscPrintf(PETSC_COMM_WORLD,"Swarm FIM\n");
 	}
 	
-	
+	calc_drho();
 	
 	ierr = veloc_total(); CHKERRQ(ierr);
 	
