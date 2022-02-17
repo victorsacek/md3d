@@ -201,7 +201,11 @@ PetscErrorCode AssembleA_Veloc(Mat A,Mat AG,DM veloc_da, DM temper_da){
 
 	ierr = DMDAVecGetArray(temper_da,local_dRho,&rr);CHKERRQ(ierr);
 	
-	
+	PetscReal sumRho;
+	VecSum(dRho,&sumRho);
+	PetscPrintf(PETSC_COMM_WORLD,"Rho sum = %lf\n\n\n",sumRho);
+
+
 	
 	PetscReal volume = dx_const*dy_const*dz_const;
 	
