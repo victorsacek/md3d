@@ -11,6 +11,8 @@ extern double Lx, Ly, depth;
 
 extern int ContMult;
 
+extern PetscInt direct_solver;
+
 extern long stepMAX;
 extern double timeMAX;
 extern double dt_MAX;
@@ -93,7 +95,7 @@ PetscErrorCode reader(int rank){
 	if (rank==0){
 		FILE *f_parametros;
 		
-		f_parametros = fopen("param_1.5.3.txt","r");
+		f_parametros = fopen("param_1.6.0.txt","r");
 		
 		fscanf(f_parametros,"%ld %ld %ld",&Nx,&Ny,&Nz);
 		fscanf(f_parametros,"%lg %lg %lg",&Lx,&Ly,&depth);
@@ -104,6 +106,10 @@ PetscErrorCode reader(int rank){
 		fscanf(f_parametros,"%s",str);
 		if (strcmp (str,"mg") == 0) fscanf(f_parametros,"%d",&ContMult);
 		else {printf("mg error\n"); exit(1);}
+
+		fscanf(f_parametros,"%s",str);
+		if (strcmp (str,"direct_solver") == 0) fscanf(f_parametros,"%d",&direct_solver);
+		else {printf("direct_solver error\n"); exit(1);}
 		
 		
 		fscanf(f_parametros,"%s",str);

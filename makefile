@@ -1,5 +1,5 @@
 PETSC_DIR=/Users/victorsacek/Documents/petsc/
-PETSC_ARCH=arch-darwin-c-debug
+PETSC_ARCH=arch-label-optimized
 
 INCFLAGS=-I${PETSC_DIR}/include -I${PETSC_DIR}/${PETSC_ARCH}/include
 

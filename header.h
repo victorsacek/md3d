@@ -300,3 +300,5 @@ unsigned int seed;
 PetscInt WITH_NON_LINEAR = 0; // Controla o uso da reologia plástica e/ou viscosidade não linear
 PetscInt WITH_ADIABATIC_H = 0;     // Controla a adição do calor adiabático
 PetscInt WITH_RADIOGENIC_H = 0;    // Controla a adição do calor radiogênico
+
+PetscInt direct_solver = 1; // 1=direct, 0=iterative
