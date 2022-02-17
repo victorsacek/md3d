@@ -52,6 +52,8 @@ PetscErrorCode write_veloc_cond(int cont);
 
 PetscErrorCode Init_Veloc();
 
+PetscErrorCode shift_pressure();
+
 
 PetscErrorCode moveSwarm(PetscReal dt);
 PetscErrorCode Swarm2Mesh();
@@ -573,6 +575,8 @@ PetscErrorCode solve_veloc_3d()
 		if (rank==0) printf("denok = %lg, k=%d, its = %d\n",denok,k,its);
 		
 	}
+
+	shift_pressure();
 	
 	////////
 	

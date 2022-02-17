@@ -22,7 +22,7 @@ typedef struct {
 
 //PetscErrorCode SwarmViewGP(DM dms,const char prefix[]);
 
-double calc_visco_ponto(double T,double z,double geoq_ponto,double e2_inva,double strain_cumulate,
+double calc_visco_ponto(double T, double P, double x, double z,double geoq_ponto,double e2_inva,double strain_cumulate,
 						double A, double n_exp, double QE, double VE);
 
 extern DM dms;
@@ -47,6 +47,9 @@ extern Vec geoq_cont,local_geoq_cont;
 
 extern PetscInt particles_per_ele;
 extern PetscInt cont_particles;
+
+extern Vec local_P_aux;
+extern Vec Pressure_aux;
 
 extern long V_NE;
 
@@ -94,6 +97,15 @@ PetscErrorCode moveSwarm(PetscReal dt)
 	ierr = DMGlobalToLocalEnd(  da_Thermal,Temper,INSERT_VALUES,local_Temper);
 	
 	ierr = DMDAVecGetArray(da_Thermal,local_Temper,&tt);CHKERRQ(ierr);
+
+	//Pressure
+	PetscScalar					***pp_aux;
+	
+	ierr = DMGlobalToLocalBegin(da_Thermal,Pressure_aux,INSERT_VALUES,local_P_aux);
+	ierr = DMGlobalToLocalEnd(  da_Thermal,Pressure_aux,INSERT_VALUES,local_P_aux);
+	ierr = DMDAVecGetArray(da_Thermal,local_P_aux,&pp_aux);CHKERRQ(ierr);
+	
+	
 	
 	
 	
@@ -114,9 +126,12 @@ PetscErrorCode moveSwarm(PetscReal dt)
 	ierr = DMSwarmGetField(dms,"strain_fac",&bs,NULL,(void**)&strain_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"layer",&bs,NULL,(void**)&layer_array);CHKERRQ(ierr);
+
+	PetscReal e2_aux_MAX = 0.0;
+	PetscReal e2_aux_MIN = 1.0E50;
 	
 	for (p=0; p<nlocal; p++) {
-		PetscReal cx,cy,cz,vx,vy,vz,tp;
+		PetscReal cx,cy,cz,vx,vy,vz,tp,Pp;
 		PetscReal rx,ry,rz,rfac;
 		PetscInt i,j,k;
 		PetscInt ii,jj,kk;
@@ -158,48 +173,56 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		vy = VV[k][j][i].v * rfac;
 		vz = VV[k][j][i].w * rfac;
 		tp = tt[k][j][i] * rfac;
+		Pp = pp_aux[k][j][i] * rfac;
 		
 		rfac = (rx)*(1.0-ry)*(1.0-rz);
 		vx += VV[k][j][i+1].u * rfac;
 		vy += VV[k][j][i+1].v * rfac;
 		vz += VV[k][j][i+1].w * rfac;
 		tp += tt[k][j][i+1] * rfac;
+		Pp += pp_aux[k][j][i+1] * rfac;
 		
 		rfac = (1.0-rx)*(ry)*(1.0-rz);
 		vx += VV[k][j+1][i].u * rfac;
 		vy += VV[k][j+1][i].v * rfac;
 		vz += VV[k][j+1][i].w * rfac;
 		tp += tt[k][j+1][i] * rfac;
+		Pp += pp_aux[k][j+1][i] * rfac;
 		
 		rfac = (rx)*(ry)*(1.0-rz);
 		vx += VV[k][j+1][i+1].u * rfac;
 		vy += VV[k][j+1][i+1].v * rfac;
 		vz += VV[k][j+1][i+1].w * rfac;
 		tp += tt[k][j+1][i+1] * rfac;
+		Pp += pp_aux[k][j+1][i+1] * rfac;
 		
 		rfac = (1.0-rx)*(1.0-ry)*(rz);
 		vx += VV[k+1][j][i].u * rfac;
 		vy += VV[k+1][j][i].v * rfac;
 		vz += VV[k+1][j][i].w * rfac;
 		tp += tt[k+1][j][i] * rfac;
+		Pp += pp_aux[k+1][j][i] * rfac;
 		
 		rfac = (rx)*(1.0-ry)*(rz);
 		vx += VV[k+1][j][i+1].u * rfac;
 		vy += VV[k+1][j][i+1].v * rfac;
 		vz += VV[k+1][j][i+1].w * rfac;
 		tp += tt[k+1][j][i+1] * rfac;
+		Pp += pp_aux[k+1][j][i+1] * rfac;
 		
 		rfac = (1.0-rx)*(ry)*(rz);
 		vx += VV[k+1][j+1][i].u * rfac;
 		vy += VV[k+1][j+1][i].v * rfac;
 		vz += VV[k+1][j+1][i].w * rfac;
 		tp += tt[k+1][j+1][i] * rfac;
+		Pp += pp_aux[k+1][j+1][i] * rfac;
 		
 		rfac = (rx)*(ry)*(rz);
 		vx += VV[k+1][j+1][i+1].u * rfac;
 		vy += VV[k+1][j+1][i+1].v * rfac;
 		vz += VV[k+1][j+1][i+1].w * rfac;
 		tp += tt[k+1][j+1][i+1] * rfac;
+		Pp += pp_aux[k+1][j+1][i+1] * rfac;
 		
 		///////// strain
 		
@@ -247,24 +270,27 @@ PetscErrorCode moveSwarm(PetscReal dt)
 		
 		
 		
+		PetscReal strain_mean = (strain[0] + strain[1] + strain[2])/3.0;
+		strain[0]-=strain_mean;
+		strain[1]-=strain_mean;
+		strain[2]-=strain_mean;
+		E2_invariant = 0;
+		for (ii=0;ii<3;ii++) E2_invariant+=strain[ii]*strain[ii];
+		for (ii=3;ii<6;ii++) E2_invariant+=strain[ii]*strain[ii]/2.0;
 		
-		E2_invariant = (strain[0]-strain[1])*(strain[0]-strain[1]);
-		E2_invariant+= (strain[1]-strain[2])*(strain[1]-strain[2]);
-		E2_invariant+= (strain[2]-strain[0])*(strain[2]-strain[0]);
-		E2_invariant/=6.0;
-		E2_invariant+= strain[3]*strain[3];
-		E2_invariant+= strain[4]*strain[4];
-		E2_invariant+= strain[5]*strain[5];
-		
-		
-		
-		
-		strain_fac[p]+= dt*PetscSqrtReal(E2_invariant);//original!!!!
-		//strain_fac[p]= PetscSqrtReal(E2_invariant);//!!!! não é o cumulativo! apenas o instantaneo.
+		E2_invariant = PetscSqrtReal(E2_invariant/2.0);
+
+		if (E2_invariant<e2_aux_MIN) e2_aux_MIN=E2_invariant;
+		if (E2_invariant>e2_aux_MAX) e2_aux_MAX=E2_invariant;
 		
 		
-		rarray[p] = calc_visco_ponto(tp,cz,inter_geoq[layer_array[p]],PetscSqrtReal(E2_invariant),strain_fac[p]/*!!!!checar*/,
+		strain_fac[p]+= dt*E2_invariant;//cumulative strain
+		//strain_rate_fac[p] = E2_invariant;
+		
+	
+		rarray[p] = calc_visco_ponto(tp,Pp,cx,cz,inter_geoq[layer_array[p]],E2_invariant,strain_fac[p],
 									 inter_A[layer_array[p]], inter_n[layer_array[p]], inter_Q[layer_array[p]], inter_V[layer_array[p]]);
+		
 		
 		
 		//dt=0.01;
@@ -297,6 +323,8 @@ PetscErrorCode moveSwarm(PetscReal dt)
 	ierr = DMDAVecRestoreArray(da_Veloc,local_V,&VV);CHKERRQ(ierr);
 
 	ierr = DMDAVecRestoreArray(da_Thermal,local_Temper,&tt);CHKERRQ(ierr);
+
+	ierr = DMDAVecRestoreArray(da_Thermal,local_P_aux,&pp_aux);CHKERRQ(ierr);
 	
 	//exit(1);
 	

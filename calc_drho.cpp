@@ -29,7 +29,10 @@ PetscErrorCode calc_drho()
 PetscErrorCode write_pressure(int cont);
 
 extern Vec local_P;
+extern Vec local_P_aux;
 extern Vec Pressure;
+
+extern Vec Pressure_aux;
 
 extern Vec local_geoq_rho;
 
@@ -190,6 +193,91 @@ PetscErrorCode calc_pressure()
 	
 	write_pressure(-1);
 	
+	return ierr;
+	
+}
+
+
+
+PetscErrorCode shift_pressure() //necessary if the surface pressure is not close to zero
+{
+	PetscErrorCode         ierr;
+
+	Stokes					***pp;
+	PetscScalar				***pp_aux;
+
+	//get Pressure array
+	ierr = DMGlobalToLocalBegin(da_Veloc,Pressure,INSERT_VALUES,local_P);
+	ierr = DMGlobalToLocalEnd(  da_Veloc,Pressure,INSERT_VALUES,local_P);
+	ierr = DMDAVecGetArray(da_Veloc,local_P,&pp);CHKERRQ(ierr);
+
+	//get Pressure_aux array
+	ierr = DMGlobalToLocalBegin(da_Thermal,Pressure_aux,INSERT_VALUES,local_P_aux);
+	ierr = DMGlobalToLocalEnd(  da_Thermal,Pressure_aux,INSERT_VALUES,local_P_aux);
+	ierr = DMDAVecGetArray(da_Thermal,local_P_aux,&pp_aux);CHKERRQ(ierr);
+
+	
+	PetscInt       sx,sy,sz,mmx,mmy,mmz;
+	PetscInt i,j,k;
+	
+	ierr = DMDAGetCorners(da_Veloc,&sx,&sy,&sz,&mmx,&mmy,&mmz);CHKERRQ(ierr);
+
+	PetscScalar ppp;
+	PetscInt cont_ppp;
+
+	for (k=sz; k<sz+mmz; k++) {
+		for (j=sy; j<sy+mmy; j++) {
+			for (i=sx; i<sx+mmx; i++) {
+				ppp=0.0;
+				cont_ppp = 0;
+				if (k<Nz-1 && j<Ny-1 && i<Nx-1) {ppp+=pp[k  ][j  ][i  ].u; cont_ppp++;}
+				if (k<Nz-1 && j<Ny-1 && i>0   )	{ppp+=pp[k  ][j  ][i-1].u; cont_ppp++;}
+				if (k<Nz-1 && j>0    && i<Nx-1) {ppp+=pp[k  ][j-1][i  ].u; cont_ppp++;}
+				if (k<Nz-1 && j>0    && i>0   )	{ppp+=pp[k  ][j-1][i-1].u; cont_ppp++;}
+				if (k>0    && j<Ny-1 && i<Nx-1)	{ppp+=pp[k-1][j  ][i  ].u; cont_ppp++;}
+				if (k>0    && j<Ny-1 && i>0   )	{ppp+=pp[k-1][j  ][i-1].u; cont_ppp++;}
+				if (k>0    && j>0    && i<Nx-1)	{ppp+=pp[k-1][j-1][i  ].u; cont_ppp++;}
+				if (k>0    && j>0    && i>0   )	{ppp+=pp[k-1][j-1][i-1].u; cont_ppp++;}
+				pp_aux[k][j][i] = ppp/cont_ppp;
+			}
+		}
+	}
+	int cont_air = 0, cont_air_all;
+	float pressure_air = 0.0, pressure_air_all;
+
+	for (k=sz; k<sz+mmz; k++) {
+		for (j=sy; j<sy+mmy; j++) {
+			for (i=sx; i<sx+mmx; i++) {
+				if (k==Nz-1){
+					pressure_air+=pp_aux[k][j][i];
+					cont_air++;
+				}
+			}
+		}
+	}
+
+	//restore Pressure_aux
+	ierr = DMDAVecRestoreArray(da_Thermal,local_P_aux,&pp_aux);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Thermal,local_P_aux,INSERT_VALUES,Pressure_aux);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Thermal,local_P_aux,INSERT_VALUES,Pressure_aux);CHKERRQ(ierr);
+
+	MPI_Allreduce(&cont_air,&cont_air_all,1,MPI_INT,MPI_SUM,PETSC_COMM_WORLD);
+	MPI_Allreduce(&pressure_air,&pressure_air_all,1,MPI_FLOAT,MPI_SUM,PETSC_COMM_WORLD);
+
+	PetscReal pressure_min;
+	
+	pressure_min = pressure_air_all/cont_air_all;
+	pressure_min=-pressure_min;
+	VecShift(Pressure_aux,pressure_min);
+
+
+	//restore Pressure
+	ierr = DMDAVecRestoreArray(da_Veloc,local_P,&pp);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Veloc,local_P,INSERT_VALUES,Pressure);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Veloc,local_P,INSERT_VALUES,Pressure);CHKERRQ(ierr);
+
+
+
 	return ierr;
 	
 }
