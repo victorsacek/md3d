@@ -297,6 +297,16 @@ PetscInt cont_particles=0;
 
 unsigned int seed;
 
+/////weak seeds
+PetscInt *seed_layer;
+PetscInt seed_layer_size;
+PetscBool seed_layer_set = PETSC_FALSE;
+
+PetscReal *strain_seed_layer;
+PetscInt strain_seed_layer_size;
+PetscBool strain_seed_layer_set = PETSC_FALSE;
+
+PetscReal random_initial_strain = 0;
 
 ////// Flags
 PetscInt WITH_NON_LINEAR = 0; // Controla o uso da reologia plástica e/ou viscosidade não linear

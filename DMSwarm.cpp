@@ -56,6 +56,18 @@ extern PetscReal *p_add_r_strain;
 
 extern unsigned int seed;
 
+extern PetscReal random_initial_strain;
+
+
+extern PetscInt *seed_layer;
+extern PetscInt seed_layer_size;
+extern PetscBool seed_layer_set;
+
+
+extern PetscReal *strain_seed_layer;
+extern PetscInt strain_seed_layer_size;
+extern PetscBool strain_seed_layer_set;
+
 
 PetscErrorCode _DMLocatePoints_DMDARegular_IS(DM dm,Vec pos,IS *iscell)
 {
@@ -231,6 +243,7 @@ PetscErrorCode createSwarm()
 	PetscReal *rarray;
 	PetscReal *rarray_rho;
 	PetscReal *rarray_H;
+	PetscReal *strain_array;
 	
 	//PetscRandom rand;
 	
@@ -341,6 +354,7 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmGetField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		ierr = DMSwarmGetField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
+		ierr = DMSwarmGetField(dms,"strain_fac",&bs,NULL,(void**)&strain_array);CHKERRQ(ierr);
 		
 		if (n_interfaces==0){
 			for (p=0; p<nlocal; p++){
@@ -358,7 +372,9 @@ PetscErrorCode createSwarm()
 			PetscReal cx,cy,cz;
 			PetscReal rx,ry,rfac;
 			PetscReal interp_interfaces[n_interfaces];
-			PetscInt in,verif,i,j;
+			PetscInt in,verif,i,j,k;
+
+			unsigned int seed_strain;
 			
 			for (p=0; p<nlocal; p++){
 				cx = array[3*p];
@@ -367,6 +383,8 @@ PetscErrorCode createSwarm()
 				
 				i = (int)(cx/dx_const);
 				j = (int)(cy/dy_const);
+				k = (int)((cz+depth)/dz_const);
+				seed_strain=(k*Nx+i)*(k*Nx+i);
 				
 				if (i<0 || i>=Nx-1) {printf("estranho i=%d\n",i); exit(1);}
 				if (j<0 || j>=Ny-1) {printf("estranho j=%d\n",j); exit(1);}
@@ -415,6 +433,22 @@ PetscErrorCode createSwarm()
 					layer_array[p] = n_interfaces;
 					//printf("entrei!\n");
 				}
+
+				rand_r(&seed_strain);
+				strain_array[p]=random_initial_strain*(float)rand_r(&seed_strain)/RAND_MAX;
+
+				if (seed_layer_set == PETSC_TRUE) {
+					if (seed_layer_size == 1 && layer_array[p] == seed_layer[0]) {
+						strain_array[p] = strain_seed_layer[0];
+					}
+					else {
+						for (int k = 0; k < seed_layer_size; k++) {
+							if (layer_array[p] == seed_layer[k]) {
+								strain_array[p] = strain_seed_layer[k];
+							}
+						}
+					}
+				}
 				/////!!!!
 				/*if (rank==0){
 					printf("\n");
@@ -435,6 +469,8 @@ PetscErrorCode createSwarm()
 		ierr = DMSwarmRestoreField(dms,"geoq_fac",&bs,NULL,(void**)&rarray);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"rho_fac",&bs,NULL,(void**)&rarray_rho);CHKERRQ(ierr);
 		ierr = DMSwarmRestoreField(dms,"H_fac",&bs,NULL,(void**)&rarray_H);CHKERRQ(ierr);
+
+		ierr = DMSwarmRestoreField(dms,"strain_fac",&bs,NULL,(void**)&strain_array);CHKERRQ(ierr);
 		
 		ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
 		
