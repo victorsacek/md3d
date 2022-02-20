@@ -42,6 +42,8 @@ PetscErrorCode montaCeVeloc(PetscReal *Ce);
 
 PetscErrorCode montafeVeloc(PetscReal *fMe);
 
+PetscErrorCode write_pressure(int cont);
+
 PetscErrorCode calc_drho();
 
 PetscErrorCode calc_pressure();
@@ -141,6 +143,8 @@ extern double dz_const;
 extern Vec Adiag;
 
 extern PetscInt direct_solver;
+
+extern int n_interfaces;
 
 
 PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,PetscInt Py,PetscInt Pz)
@@ -434,6 +438,13 @@ PetscErrorCode build_veloc_3d()
 	ierr = VecZeroEntries(Vf_P);CHKERRQ(ierr);
 	
 	ierr = VecZeroEntries(Precon);CHKERRQ(ierr);
+
+	if (PRESSURE_INIT==0 && n_interfaces>0){
+		PRESSURE_INIT=1;
+		ierr = calc_pressure();
+		ierr = shift_pressure();
+		write_pressure(-1);
+	}
 	
 	ierr = moveSwarm(0.0);
 	ierr = Swarm2Mesh();
@@ -446,10 +457,6 @@ PetscErrorCode build_veloc_3d()
 	
 	ierr = calc_drho();CHKERRQ(ierr);
 
-	if (PRESSURE_INIT==0){
-		PRESSURE_INIT=1;
-		ierr = calc_pressure();
-	}
 	
 	ierr = AssembleF_Veloc(Vf,da_Veloc,da_Thermal,Vf_P);CHKERRQ(ierr);
 	if (rank==0) printf("t\n");

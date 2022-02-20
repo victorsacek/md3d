@@ -122,7 +122,8 @@ int main(int argc,char **args)
 	
 	bcv_extern = 0;
 	ierr = PetscOptionsGetInt(NULL,NULL,"-bcve",&bcv_extern,NULL);CHKERRQ(ierr);
-	
+
+	ierr = PetscOptionsGetInt(NULL,NULL,"-initial_dynamic_range",&initial_dynamic_range,NULL);CHKERRQ(ierr);	
 	
 	denok_min = 1.0E-4;
 	ierr = PetscOptionsGetReal(NULL,NULL,"-denok",&denok_min,NULL);CHKERRQ(ierr);
@@ -162,7 +163,42 @@ int main(int argc,char **args)
 	
 	calc_drho();
 	
-	ierr = veloc_total(); CHKERRQ(ierr);
+	//ierr = veloc_total(); CHKERRQ(ierr);
+	if (visc_MAX>visc_MIN && initial_dynamic_range>0){
+		double visc_contrast = PetscLog10Real(visc_MAX/visc_MIN);
+
+		double visc_mean = PetscPowReal(10.0,PetscLog10Real(visc_MIN)+visc_contrast/2);
+
+		int n_visc=0;
+
+		visc_MIN_comp = visc_mean;
+		visc_MAX_comp = visc_mean;
+
+		PetscPrintf(PETSC_COMM_WORLD,"\n\nViscosity range: %.3lg %.3lg\n\n",visc_MIN_comp,visc_MAX_comp);
+
+		ierr = veloc_total(); CHKERRQ(ierr);
+
+		while ((visc_MIN_comp!=visc_MIN) && (visc_MAX_comp!=visc_MAX)){
+
+			visc_MIN_comp = visc_mean*PetscPowReal(10.0,-n_visc*1.0);
+			visc_MAX_comp = visc_mean*PetscPowReal(10.0,n_visc*1.0);
+
+			if (visc_MIN_comp<visc_MIN) visc_MIN_comp=visc_MIN;
+			if (visc_MAX_comp>visc_MAX) visc_MAX_comp=visc_MAX;
+
+			PetscPrintf(PETSC_COMM_WORLD,"\n\nViscosity range: %.3lg %.3lg\n\n",visc_MIN_comp,visc_MAX_comp);
+
+			ierr = veloc_total(); CHKERRQ(ierr);
+
+			n_visc++;
+		}
+	}
+	else {
+		if (visc_MAX==visc_MIN) visc_MAX = visc_MIN*1.0001;  //avoiding the problem to the f2 in the denominator (Gerya...)
+		visc_MIN_comp = visc_MIN;
+		visc_MAX_comp = visc_MAX;
+		ierr = veloc_total(); CHKERRQ(ierr);
+	}
 	
 	
 	PetscPrintf(PETSC_COMM_WORLD,"passou veloc_total\n");

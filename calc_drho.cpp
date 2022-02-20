@@ -111,9 +111,6 @@ PetscErrorCode calc_pressure()
 		SETERRQ1(PETSC_COMM_WORLD,1,"Wrong partition (temper,velocity)\n",1);
 	}
 	
-	//printf("%d %d %d %d Pressure\n",sez,sez+mz,sex,sex+mx);
-	//printf("%d %d %d %d Pressure\n",sez,sez+mz,sex,sex+mx);
-	
 	PetscReal interp_interfaces[n_interfaces];
 	
 	for (ek = sez; ek < sez+mz; ek++) {

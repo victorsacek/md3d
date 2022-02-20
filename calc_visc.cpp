@@ -220,7 +220,7 @@ double calc_visco_ponto(double T,double P, double x, double z,double geoq_ponto,
 	double f1 = PetscLogReal(visc_MAX_comp/visc_MIN_comp);
 	double f2 = PetscLogReal(visc_MAX/visc_MIN);
 	double f3 = PetscLogReal(visco_real/visc_MIN);
-	//visco_real = visc_MIN_comp*PetscExpReal(f1*f3/f2);
+	visco_real = visc_MIN_comp*PetscExpReal(f1*f3/f2);
 
 	
 	return(visco_real);
