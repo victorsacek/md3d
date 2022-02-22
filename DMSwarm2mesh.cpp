@@ -11,6 +11,7 @@ extern Vec geoq_rho,local_geoq_rho;
 extern Vec geoq_cont,local_geoq_cont;
 extern Vec geoq_H,local_geoq_H;
 extern Vec geoq_strain, local_geoq_strain;
+extern Vec geoq_strain_rate, local_geoq_strain_rate;
 
 extern Vec Temper,local_Temper;
 
@@ -29,17 +30,20 @@ PetscErrorCode Swarm2Mesh(){
 
 	PetscErrorCode ierr;
 	PetscScalar             ***qq,***qq_cont,***qq_rho,***TT,***qq_H,***qq_strain;
+	PetscScalar				***qq_strain_rate;
 	
 	ierr = VecSet(geoq,0.0);CHKERRQ(ierr);
 	ierr = VecSet(geoq_rho,0.0);CHKERRQ(ierr);
 	ierr = VecSet(geoq_cont,0.0);CHKERRQ(ierr);
 	ierr = VecSet(geoq_H,0.0);CHKERRQ(ierr);
 	ierr = VecSet(geoq_strain,0.0);CHKERRQ(ierr);
+	ierr = VecSet(geoq_strain_rate,0.0);CHKERRQ(ierr);
 	
 	ierr = VecZeroEntries(local_geoq);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_geoq_rho);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_geoq_H);CHKERRQ(ierr);
 	ierr = VecZeroEntries(local_geoq_strain);CHKERRQ(ierr);
+	ierr = VecZeroEntries(local_geoq_strain_rate);CHKERRQ(ierr);
 	
 	ierr = DMGlobalToLocalBegin(da_Thermal,geoq,INSERT_VALUES,local_geoq);
 	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq,INSERT_VALUES,local_geoq);
@@ -52,13 +56,17 @@ PetscErrorCode Swarm2Mesh(){
 	
 	ierr = DMGlobalToLocalBegin(da_Thermal,geoq_strain,INSERT_VALUES,local_geoq_strain);
 	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_strain,INSERT_VALUES,local_geoq_strain);
+
+	ierr = DMGlobalToLocalBegin(da_Thermal,geoq_strain_rate,INSERT_VALUES,local_geoq_strain_rate);
+	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_strain_rate,INSERT_VALUES,local_geoq_strain_rate);
 	
 	
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq,&qq);CHKERRQ(ierr);
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq_rho,&qq_rho);CHKERRQ(ierr);
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq_H,&qq_H);CHKERRQ(ierr);
 	ierr = DMDAVecGetArray(da_Thermal,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
-	
+	ierr = DMDAVecGetArray(da_Thermal,local_geoq_strain_rate,&qq_strain_rate);CHKERRQ(ierr);
+
 	
 	ierr = DMGlobalToLocalBegin(da_Thermal,geoq_cont,INSERT_VALUES,local_geoq_cont);
 	ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_cont,INSERT_VALUES,local_geoq_cont);
@@ -74,6 +82,7 @@ PetscErrorCode Swarm2Mesh(){
 	PetscReal *rho_fac;
 	PetscReal *H_fac;
 	PetscReal *strain_fac;
+	PetscReal *strain_rate_fac;
 	
 	ierr = DMSwarmGetLocalSize(dms,&nlocal);CHKERRQ(ierr);
 	
@@ -82,6 +91,7 @@ PetscErrorCode Swarm2Mesh(){
 	ierr = DMSwarmGetField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmGetField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
+	ierr = DMSwarmGetField(dms,"strain_rate_fac",NULL,NULL,(void**)&strain_rate_fac);CHKERRQ(ierr);
 	
 	if (visc_harmonic_mean==1){
 		for (p=0; p<nlocal; p++) {
@@ -121,6 +131,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j][i] += rfac*rho_fac[p];
 			qq_H	[k][j][i] += rfac*H_fac[p];
 			qq_strain[k][j][i] += rfac*strain_fac[p];
+			qq_strain_rate[k][j][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j][i] += rfac;
 			
 			rfac = (rx)*(1.0-ry)*(1.0-rz);
@@ -128,6 +139,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j][i+1] += rfac*rho_fac[p];
 			qq_H	[k][j][i+1] += rfac*H_fac[p];
 			qq_strain[k][j][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k][j][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j][i+1] += rfac;
 			
 			rfac = (1.0-rx)*(ry)*(1.0-rz);
@@ -135,6 +147,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j+1][i] += rfac*rho_fac[p];
 			qq_H	[k][j+1][i] += rfac*H_fac[p];
 			qq_strain[k][j+1][i] += rfac*strain_fac[p];
+			qq_strain_rate[k][j+1][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j+1][i] += rfac;
 			
 			rfac = (rx)*(ry)*(1.0-rz);
@@ -142,6 +155,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j+1][i+1] += rfac*rho_fac[p];
 			qq_H	[k][j+1][i+1] += rfac*H_fac[p];
 			qq_strain[k][j+1][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k][j+1][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j+1][i+1] += rfac;
 			
 			
@@ -151,6 +165,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j][i] += rfac*rho_fac[p];
 			qq_H	[k+1][j][i] += rfac*H_fac[p];
 			qq_strain[k+1][j][i] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j][i] += rfac;
 			
 			rfac = (rx)*(1.0-ry)*(rz);
@@ -158,6 +173,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j][i+1] += rfac*rho_fac[p];
 			qq_H	[k+1][j][i+1] += rfac*H_fac[p];
 			qq_strain[k+1][j][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j][i+1] += rfac;
 			
 			rfac = (1.0-rx)*(ry)*(rz);
@@ -165,6 +181,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j+1][i] += rfac*rho_fac[p];
 			qq_H	[k+1][j+1][i] += rfac*H_fac[p];
 			qq_strain[k+1][j+1][i] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j+1][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j+1][i] += rfac;
 			
 			rfac = (rx)*(ry)*(rz);
@@ -172,6 +189,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j+1][i+1] += rfac*rho_fac[p];
 			qq_H	[k+1][j+1][i+1] += rfac*H_fac[p];
 			qq_strain[k+1][j+1][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j+1][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j+1][i+1] += rfac;
 		}
 	}
@@ -213,6 +231,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j][i] += rfac*rho_fac[p];
 			qq_H	[k][j][i] += rfac*H_fac[p];
 			qq_strain[k][j][i] += rfac*strain_fac[p];
+			qq_strain_rate[k][j][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j][i] += rfac;
 			
 			rfac = (rx)*(1.0-ry)*(1.0-rz);
@@ -220,6 +239,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j][i+1] += rfac*rho_fac[p];
 			qq_H	[k][j][i+1] += rfac*H_fac[p];
 			qq_strain[k][j][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k][j][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j][i+1] += rfac;
 			
 			rfac = (1.0-rx)*(ry)*(1.0-rz);
@@ -227,6 +247,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j+1][i] += rfac*rho_fac[p];
 			qq_H	[k][j+1][i] += rfac*H_fac[p];
 			qq_strain[k][j+1][i] += rfac*strain_fac[p];
+			qq_strain_rate[k][j+1][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j+1][i] += rfac;
 			
 			rfac = (rx)*(ry)*(1.0-rz);
@@ -234,6 +255,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k][j+1][i+1] += rfac*rho_fac[p];
 			qq_H	[k][j+1][i+1] += rfac*H_fac[p];
 			qq_strain[k][j+1][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k][j+1][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k][j+1][i+1] += rfac;
 			
 			
@@ -243,6 +265,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j][i] += rfac*rho_fac[p];
 			qq_H	[k+1][j][i] += rfac*H_fac[p];
 			qq_strain[k+1][j][i] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j][i] += rfac;
 			
 			rfac = (rx)*(1.0-ry)*(rz);
@@ -250,6 +273,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j][i+1] += rfac*rho_fac[p];
 			qq_H	[k+1][j][i+1] += rfac*H_fac[p];
 			qq_strain[k+1][j][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j][i+1] += rfac;
 			
 			rfac = (1.0-rx)*(ry)*(rz);
@@ -257,6 +281,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j+1][i] += rfac*rho_fac[p];
 			qq_H	[k+1][j+1][i] += rfac*H_fac[p];
 			qq_strain[k+1][j+1][i] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j+1][i] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j+1][i] += rfac;
 			
 			rfac = (rx)*(ry)*(rz);
@@ -264,6 +289,7 @@ PetscErrorCode Swarm2Mesh(){
 			qq_rho	[k+1][j+1][i+1] += rfac*rho_fac[p];
 			qq_H	[k+1][j+1][i+1] += rfac*H_fac[p];
 			qq_strain[k+1][j+1][i+1] += rfac*strain_fac[p];
+			qq_strain_rate[k+1][j+1][i+1] += rfac*strain_rate_fac[p];
 			qq_cont	[k+1][j+1][i+1] += rfac;
 		}
 	}
@@ -273,6 +299,7 @@ PetscErrorCode Swarm2Mesh(){
 	ierr = DMSwarmRestoreField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
 	ierr = DMSwarmRestoreField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"strain_rate_fac",NULL,NULL,(void**)&strain_rate_fac);CHKERRQ(ierr);
 	
 	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq,&qq);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq,ADD_VALUES,geoq);CHKERRQ(ierr);
@@ -289,6 +316,10 @@ PetscErrorCode Swarm2Mesh(){
 	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq_strain,&qq_strain);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq_strain,ADD_VALUES,geoq_strain);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(da_Thermal,local_geoq_strain,ADD_VALUES,geoq_strain);CHKERRQ(ierr);
+
+	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq_strain_rate,&qq_strain_rate);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq_strain_rate,ADD_VALUES,geoq_strain_rate);CHKERRQ(ierr);
+	ierr = DMLocalToGlobalEnd(da_Thermal,local_geoq_strain_rate,ADD_VALUES,geoq_strain_rate);CHKERRQ(ierr);
 	
 	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq_cont,&qq_cont);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq_cont,ADD_VALUES,geoq_cont);CHKERRQ(ierr);
@@ -301,6 +332,7 @@ PetscErrorCode Swarm2Mesh(){
 	VecPointwiseDivide(geoq_rho,geoq_rho,geoq_cont);
 	VecPointwiseDivide(geoq_H,geoq_H,geoq_cont);
 	VecPointwiseDivide(geoq_strain,geoq_strain,geoq_cont);
+	VecPointwiseDivide(geoq_strain_rate,geoq_strain_rate,geoq_cont);
 	//VecPointwiseMax(geoq,geoq,geoqOnes);
 	
 	

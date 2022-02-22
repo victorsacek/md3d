@@ -188,7 +188,7 @@ PetscErrorCode calc_pressure()
 	ierr = DMLocalToGlobalBegin(da_Veloc,local_P,INSERT_VALUES,Pressure);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalEnd(da_Veloc,local_P,INSERT_VALUES,Pressure);CHKERRQ(ierr);
 	
-	write_pressure(-1);
+	//write_pressure(-1);
 	
 	return ierr;
 	

@@ -162,7 +162,7 @@ double calc_visco_ponto(double T,double P, double x, double z,double geoq_ponto,
 				visco_real = pow(A,-1./n_exp)*pow(e2_inva,(1.-n_exp)/(n_exp))*exp((QE+VE*P)/(n_exp*R*TK));
 			}*/
 			visco_real = pow(A,-1./n_exp)*pow(e2_inva,(1.-n_exp)/(n_exp))*exp((QE+VE*P)/(n_exp*R*TK));
-
+			//if (x<200.0&&T>1300.0&&T<1301.0) printf("%.2lg | %.2lg %.2lg %.2lg %.2lg %.2lg | %.2lg\n",visco_real, TK,P,QE,VE,n_exp,e2_inva);
 		}
 	}
 	

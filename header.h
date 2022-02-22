@@ -199,6 +199,9 @@ Vec local_geoq_cont;
 Vec geoq_strain;
 Vec local_geoq_strain;
 
+Vec geoq_strain_rate;
+Vec local_geoq_strain_rate;
+
 
 /////////
 
@@ -241,6 +244,8 @@ PetscReal *VCe;
 PetscReal *VfMe;
 
 PetscInt Verif_VG=0;
+
+PetscInt Verif_first_veloc=0;
 
 
 Vec Precon;
@@ -290,6 +295,7 @@ PetscReal *p_add_r_H;
 PetscInt *p_add_i;
 PetscInt *p_add_layer;
 PetscReal *p_add_r_strain;
+PetscReal *p_add_r_strain_rate;
 
 
 
