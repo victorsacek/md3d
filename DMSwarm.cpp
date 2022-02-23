@@ -480,7 +480,7 @@ PetscErrorCode createSwarm()
 	
 	ierr = DMView(dms,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
 	
-	ierr = SwarmViewGP(dms,"step_0");CHKERRQ(ierr);
+	//ierr = SwarmViewGP(dms,"step_0");CHKERRQ(ierr);
 	
 	
 	MPI_Barrier(PETSC_COMM_WORLD);
