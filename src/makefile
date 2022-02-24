@@ -11,7 +11,7 @@ include ${PETSC_DIR}/lib/petsc/conf/rules
  
 all: ${OBJECTS} chkopts
 	-${CLINKER} -o MD3D_5.0_swarm ${OBJECTS} ${PETSC_LIB}
-	cp MD3D_5.0_swarm /Users/victorsacek/Documents/Gits/MD3D/experimento_strain_softening_creep
+	mv MD3D_5.0_swarm ../
 	rm *.o
 
 %.o: %.cpp
