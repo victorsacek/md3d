@@ -153,7 +153,7 @@ mg             1
 direct_solver  1
 
 stepMAX  5000
-timeMAX  100.0e6
+timeMAX  20.0e6
 dt_MAX   10.0e3
 print_step  2
 
