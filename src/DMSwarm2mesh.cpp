@@ -24,6 +24,7 @@ extern double dz_const;
 extern double Lx, Ly, depth;
 
 extern PetscInt visc_harmonic_mean;
+extern PetscInt visc_const_per_element;
 
 
 PetscErrorCode Swarm2Mesh(){
@@ -294,12 +295,6 @@ PetscErrorCode Swarm2Mesh(){
 		}
 	}
 	
-	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
-	ierr = DMSwarmRestoreField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
-	ierr = DMSwarmRestoreField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
-	ierr = DMSwarmRestoreField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
-	ierr = DMSwarmRestoreField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
-	ierr = DMSwarmRestoreField(dms,"strain_rate_fac",NULL,NULL,(void**)&strain_rate_fac);CHKERRQ(ierr);
 	
 	ierr = DMDAVecRestoreArray(da_Thermal,local_geoq,&qq);CHKERRQ(ierr);
 	ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq,ADD_VALUES,geoq);CHKERRQ(ierr);
@@ -334,8 +329,80 @@ PetscErrorCode Swarm2Mesh(){
 	VecPointwiseDivide(geoq_strain,geoq_strain,geoq_cont);
 	VecPointwiseDivide(geoq_strain_rate,geoq_strain_rate,geoq_cont);
 	//VecPointwiseMax(geoq,geoq,geoqOnes);
+
+
+	if (visc_const_per_element==1){
+		ierr = VecSet(geoq,0.0);CHKERRQ(ierr);
+		ierr = VecSet(geoq_cont,0.0);CHKERRQ(ierr);
+
+		ierr = DMGlobalToLocalBegin(da_Thermal,geoq,INSERT_VALUES,local_geoq);
+		ierr = DMGlobalToLocalEnd(  da_Thermal,geoq,INSERT_VALUES,local_geoq);
+		ierr = DMDAVecGetArray(da_Thermal,local_geoq,&qq);CHKERRQ(ierr);
+
+		
+		ierr = DMGlobalToLocalBegin(da_Thermal,geoq_cont,INSERT_VALUES,local_geoq_cont);
+		ierr = DMGlobalToLocalEnd(  da_Thermal,geoq_cont,INSERT_VALUES,local_geoq_cont);
+		ierr = DMDAVecGetArray(da_Thermal,local_geoq_cont,&qq_cont);CHKERRQ(ierr);
+		if (visc_harmonic_mean==1){
+			for (p=0; p<nlocal; p++) {
+				PetscReal cx,cy,cz;
+				PetscInt i,j,k;
+				
+				cx = array[3*p];
+				cy = array[3*p+1];
+				cz = array[3*p+2];
+				
+				i = (int)(cx/dx_const);
+				j = (int)(cy/dy_const);
+				k = (int)((cz+depth)/dz_const);
+				
+				qq[k][j][i] += 1.0/geoq_fac[p];
+				qq_cont[k][j][i] += 1.0;
+			}
+		}
+		else {
+			for (p=0; p<nlocal; p++) {
+				PetscReal cx,cy,cz;
+				PetscInt i,j,k;
+				
+				cx = array[3*p];
+				cy = array[3*p+1];
+				cz = array[3*p+2];
+				
+				i = (int)(cx/dx_const);
+				j = (int)(cy/dy_const);
+				k = (int)((cz+depth)/dz_const);
+				
+				qq[k][j][i] += geoq_fac[p];
+				qq_cont[k][j][i] += 1.0;
+			}
+		}
+
+
+		ierr = DMDAVecRestoreArray(da_Thermal,local_geoq,&qq);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq,ADD_VALUES,geoq);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalEnd(da_Thermal,local_geoq,ADD_VALUES,geoq);CHKERRQ(ierr);
+		
+		ierr = DMDAVecRestoreArray(da_Thermal,local_geoq_cont,&qq_cont);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalBegin(da_Thermal,local_geoq_cont,ADD_VALUES,geoq_cont);CHKERRQ(ierr);
+		ierr = DMLocalToGlobalEnd(da_Thermal,local_geoq_cont,ADD_VALUES,geoq_cont);CHKERRQ(ierr);
+
+		VecPointwiseDivide(geoq,geoq,geoq_cont);
+		if (visc_harmonic_mean==1) VecReciprocal(geoq); //<--- harmonic
+
+	}
+
 	
 	
+
+
+	ierr = DMSwarmRestoreField(dms,DMSwarmPICField_coor,&bs,NULL,(void**)&array);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"geoq_fac",NULL,NULL,(void**)&geoq_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"rho_fac",NULL,NULL,(void**)&rho_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"H_fac",NULL,NULL,(void**)&H_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"strain_fac",NULL,NULL,(void**)&strain_fac);CHKERRQ(ierr);
+	ierr = DMSwarmRestoreField(dms,"strain_rate_fac",NULL,NULL,(void**)&strain_rate_fac);CHKERRQ(ierr);
+
 	ierr = DMGlobalToLocalBegin(da_Thermal,Temper,INSERT_VALUES,local_Temper);
 	ierr = DMGlobalToLocalEnd(  da_Thermal,Temper,INSERT_VALUES,local_Temper);
 	
