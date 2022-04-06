@@ -406,6 +406,8 @@ PetscErrorCode create_veloc_3d(PetscInt mx,PetscInt my,PetscInt mz,PetscInt Px,P
 	
 	
 	ierr = KSPCreate(PETSC_COMM_WORLD,&V_ksp);CHKERRQ(ierr);
+	ierr = KSPSetDM(V_ksp,da_Veloc);CHKERRQ(ierr);
+	ierr = KSPSetDMActive(V_ksp,PETSC_FALSE);CHKERRQ(ierr);
 	ierr = KSPSetOptionsPrefix(V_ksp,"veloc_"); CHKERRQ(ierr);
 	
 	PetscTime(&Tempo2p);
